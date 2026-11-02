@@ -1,0 +1,31 @@
+# AWS CodeBuild 빌드 설정
+# 순서: 의존성 설치 → 테스트 → 빌드 → 결과물을 CodeDeploy로 넘김
+version: 0.2
+
+env:
+  variables:
+    CI: "true"            # React 테스트가 대기(watch) 모드로 멈추지 않게 함
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20          # CodeBuild 이미지가 지원하는 버전인지 확인 필요
+  pre_build:
+    commands:
+      - node -v && npm -v
+      - npm ci
+  build:
+    commands:
+      - npm test --if-present
+      - npm run build --if-present
+
+artifacts:
+  files:
+    - '**/*'
+  exclude-paths:
+    - node_modules/**/*   # EC2에서 운영용 패키지만 다시 설치
+    - .git/**/*
+
+cache:
+  paths:
+    - /root/.npm/**/*     # 다음 빌드 속도를 높이기 위한 npm 캐시
