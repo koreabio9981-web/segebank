@@ -11,8 +11,9 @@ RUN_USER="${SUDO_USER:-ubuntu}"
 echo "▶ 1/6 시스템 업데이트"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y && apt-get upgrade -y
-apt-get install -y curl git dnsutils unattended-upgrades awscli 2>/dev/null \
-  || apt-get install -y curl git dnsutils unattended-upgrades
+apt-get install -y curl git dnsutils unattended-upgrades
+# AWS CLI (S3 백업용). Ubuntu 24.04 는 apt 패키지가 없어 snap 으로 설치
+command -v aws >/dev/null || snap install aws-cli --classic || echo "AWS CLI 설치 실패: S3 백업을 쓰려면 수동 설치"
 
 echo "▶ 2/6 시간대·서버 이름"
 timedatectl set-timezone Asia/Seoul

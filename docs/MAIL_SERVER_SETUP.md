@@ -60,6 +60,8 @@ mailserver/
 
 ## 1단계: EC2 준비
 
+> 콘솔에서 하나씩 만드는 대신 [AWS_AUTO_DEPLOY.md](AWS_AUTO_DEPLOY.md)의 CloudFormation 자동 구축을 쓰면 1~2단계와 백업·경보가 한 번에 만들어집니다.
+
 | 항목 | 값 |
 |---|---|
 | 리전 | 서울 ap-northeast-2 |
