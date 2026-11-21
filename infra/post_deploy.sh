@@ -36,7 +36,7 @@ case "${1:-}" in
     TOPIC="$(out SesFeedbackTopicArn)"
     URL="https://news.$DOMAIN/webhooks/service/ses"
     curl -s -o /dev/null -w "%{http_code}" "https://news.$DOMAIN/" | grep -qE '^(200|30[0-9])$' \
-      || { echo "https://news.$DOMAIN 이 응답하지 않습니다. 서버에서 02_start.sh 실행 후 다시 시도"; exit 1; }
+      || { echo "https://news.$DOMAIN 이 응답하지 않습니다. 서버에서 sudo ./scripts/install.sh 실행 후 다시 시도"; exit 1; }
     aws sns subscribe --region "$REGION" --topic-arn "$TOPIC" --protocol https \
       --notification-endpoint "$URL" --output text
     echo "listmonk Settings → Bounces 에서 'Enable SES' 가 켜져 있어야 자동 승인됩니다."

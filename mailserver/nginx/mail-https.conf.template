@@ -1,0 +1,43 @@
+# [공용 서버 모드] 2단계: 인증서 발급 후 HTTPS 포함. 소개뱅크 사이트 설정과는 별도 파일
+server {
+    listen 80;
+    server_name mail.__DOMAIN__ webmail.__DOMAIN__ news.__DOMAIN__;
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name mail.__DOMAIN__;
+    ssl_certificate     /etc/letsencrypt/live/mail.__DOMAIN__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mail.__DOMAIN__/privkey.pem;
+    return 200 "mail server\n";
+}
+
+server {
+    listen 443 ssl http2;
+    server_name webmail.__DOMAIN__;
+    ssl_certificate     /etc/letsencrypt/live/webmail.__DOMAIN__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/webmail.__DOMAIN__/privkey.pem;
+    client_max_body_size 30m;
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name news.__DOMAIN__;
+    ssl_certificate     /etc/letsencrypt/live/webmail.__DOMAIN__/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/webmail.__DOMAIN__/privkey.pem;
+    client_max_body_size 20m;
+    location / {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

@@ -1,0 +1,24 @@
+# /etc/fail2ban/jail.d/mail.local — 무차별 비밀번호 대입 차단
+[DEFAULT]
+backend = systemd
+bantime = 1h
+findtime = 10m
+maxretry = 5
+
+[sshd]
+enabled = true
+
+[postfix-sasl]
+enabled = true
+filter = postfix[mode=auth]
+port = smtp,465,submission
+
+[dovecot]
+enabled = true
+port = imaps
+
+[roundcube-auth]
+enabled = true
+port = http,https
+backend = auto
+logpath = /var/log/roundcube/errors.log

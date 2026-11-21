@@ -1,0 +1,13 @@
+[app]
+address = "127.0.0.1:9000"
+
+[db]
+host = "127.0.0.1"
+port = 5432
+user = "listmonk"
+password = "__LISTMONK_DB_PASSWORD__"
+database = "listmonk"
+ssl_mode = "disable"
+max_open = 25
+max_idle = 25
+max_lifetime = "300s"

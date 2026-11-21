@@ -1,0 +1,7 @@
+# [공용 서버 모드] 1단계: 인증서 발급용 (HTTP 만). shared_start.sh 가 __DOMAIN__ 을 치환해 설치
+server {
+    listen 80;
+    server_name mail.__DOMAIN__ webmail.__DOMAIN__ news.__DOMAIN__;
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 301 https://$host$request_uri; }
+}
