@@ -1,0 +1,18 @@
+{
+	email {$ACME_EMAIL}
+}
+
+# 메일 서버용 인증서 발급 전용 (메일 프로그램이 이 인증서를 사용)
+mail.{$DOMAIN} {
+	respond "mail server" 200
+}
+
+# 웹메일
+webmail.{$DOMAIN} {
+	reverse_proxy roundcube:80
+}
+
+# 메일러 (관리 화면: /admin, 구독·수신거부 페이지 포함)
+news.{$DOMAIN} {
+	reverse_proxy listmonk:9000
+}

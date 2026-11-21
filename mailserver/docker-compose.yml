@@ -1,0 +1,130 @@
+# 회사 메일 서버: 수신(docker-mailserver) + 웹메일(Roundcube) + 메일러(listmonk) + HTTPS(Caddy)
+# 보내는 메일은 모두 Amazon SES(587번 포트)로 나갑니다.
+# 실행: ./scripts/02_start.sh   (직접 실행하지 말고 스크립트 사용 권장)
+
+services:
+  # ── 메일 수신·보관 (MX: mail.<도메인>) ──
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:${DMS_VERSION}
+    container_name: mailserver
+    hostname: mail.${DOMAIN}
+    ports:
+      - "25:25"     # 외부 메일 수신
+      - "465:465"   # 직원 메일 프로그램 발송 (SSL)
+      - "587:587"   # 직원 메일 프로그램 발송 (STARTTLS)
+      - "993:993"   # 직원 메일 프로그램 수신 (IMAP SSL)
+    volumes:
+      - ./data/dms/mail-data/:/var/mail/
+      - ./data/dms/mail-state/:/var/mail-state/
+      - ./data/dms/mail-logs/:/var/log/mail/
+      - ./data/dms/config/:/tmp/docker-mailserver/
+      - caddy_data:/caddy:ro                       # Caddy 가 발급한 인증서를 함께 사용
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      # 인증서
+      - SSL_TYPE=manual
+      - SSL_CERT_PATH=/caddy/caddy/certificates/acme-v02.api.letsencrypt.org-directory/mail.${DOMAIN}/mail.${DOMAIN}.crt
+      - SSL_KEY_PATH=/caddy/caddy/certificates/acme-v02.api.letsencrypt.org-directory/mail.${DOMAIN}/mail.${DOMAIN}.key
+      # 스팸 필터: Rspamd 하나로 통합 (공식 권장 조합)
+      - ENABLE_RSPAMD=1
+      - ENABLE_OPENDKIM=0
+      - ENABLE_OPENDMARC=0
+      - ENABLE_POLICYD_SPF=0
+      - ENABLE_AMAVIS=0
+      - ENABLE_SPAMASSASSIN=0
+      - ENABLE_CLAMAV=0                            # 백신: 메모리 1GB+ 사용, 필요 시 1 로 변경 후 서버 사양 상향
+      - MOVE_SPAM_TO_JUNK=1
+      # 무차별 비밀번호 대입 차단
+      - ENABLE_FAIL2BAN=1
+      # 보내는 메일은 전부 SES 로 중계
+      - DEFAULT_RELAY_HOST=[${SES_SMTP_HOST}]:587
+      - RELAY_USER=${SES_SMTP_USER}
+      - RELAY_PASSWORD=${SES_SMTP_PASS}
+      - POSTMASTER_ADDRESS=postmaster@${DOMAIN}
+      - TZ=Asia/Seoul
+    cap_add:
+      - NET_ADMIN                                  # Fail2Ban 에 필요
+    networks:
+      default:
+        aliases:
+          - mail.${DOMAIN}                         # 웹메일이 내부망으로 접속해도 인증서 이름이 일치하도록
+    restart: always
+    stop_grace_period: 1m
+
+  # ── 웹메일 (https://webmail.<도메인>) ──
+  roundcube:
+    image: roundcube/roundcubemail:${ROUNDCUBE_VERSION}
+    container_name: roundcube
+    environment:
+      - ROUNDCUBEMAIL_DEFAULT_HOST=ssl://mail.${DOMAIN}
+      - ROUNDCUBEMAIL_DEFAULT_PORT=993
+      - ROUNDCUBEMAIL_SMTP_SERVER=ssl://mail.${DOMAIN}
+      - ROUNDCUBEMAIL_SMTP_PORT=465
+      - ROUNDCUBEMAIL_DB_TYPE=sqlite
+      - ROUNDCUBEMAIL_SKIN=elastic
+      - ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE=25M
+    volumes:
+      - ./data/roundcube/db:/var/roundcube/db
+    depends_on:
+      - mailserver
+    restart: always
+
+  # ── 메일러 DB ──
+  listmonk-db:
+    image: postgres:17-alpine
+    container_name: listmonk_db
+    environment:
+      - POSTGRES_USER=listmonk
+      - POSTGRES_PASSWORD=${LISTMONK_DB_PASSWORD}
+      - POSTGRES_DB=listmonk
+    volumes:
+      - ./data/listmonk-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U listmonk"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: always
+
+  # ── 고객 발송 메일러 (https://news.<도메인>/admin) ──
+  listmonk:
+    image: listmonk/listmonk:${LISTMONK_VERSION}
+    container_name: listmonk
+    command: [sh, -c, "./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config '' && ./listmonk --config ''"]
+    environment:
+      - LISTMONK_app__address=0.0.0.0:9000
+      - LISTMONK_db__host=listmonk-db
+      - LISTMONK_db__port=5432
+      - LISTMONK_db__user=listmonk
+      - LISTMONK_db__password=${LISTMONK_DB_PASSWORD}
+      - LISTMONK_db__database=listmonk
+      - LISTMONK_db__ssl_mode=disable
+      - LISTMONK_ADMIN_USER=${LISTMONK_ADMIN_USER}
+      - LISTMONK_ADMIN_PASSWORD=${LISTMONK_ADMIN_PASSWORD}
+      - TZ=Asia/Seoul
+    volumes:
+      - ./data/listmonk-uploads:/listmonk/uploads
+    depends_on:
+      listmonk-db:
+        condition: service_healthy
+    restart: always
+
+  # ── HTTPS 인증서 자동 발급 + 웹 연결 ──
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: always
+
+volumes:
+  caddy_data:
+  caddy_config:
