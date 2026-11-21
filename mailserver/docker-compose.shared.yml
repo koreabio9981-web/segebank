@@ -1,0 +1,118 @@
+# [공용 서버 모드] 소개뱅크 운영 서버(Amazon Linux 2023 + Nginx)에 함께 설치할 때 사용
+# - Caddy 없음: HTTPS 는 서버의 Nginx + certbot 이 담당
+# - 웹 화면은 127.0.0.1 에만 열고 Nginx 가 연결 (외부 직접 접근 차단)
+# - 메모리·CPU 상한과 OOM 우선순위로 소개뱅크 앱을 보호
+# 사용: .env 에 COMPOSE_FILE=docker-compose.shared.yml  (scripts/shared_start.sh 가 자동 추가)
+
+x-protect-app: &protect-app
+  restart: always
+  oom_score_adj: 500          # 메모리 부족 시 소개뱅크(Node)보다 먼저 정리되도록
+
+services:
+  mailserver:
+    <<: *protect-app
+    image: ghcr.io/docker-mailserver/docker-mailserver:${DMS_VERSION}
+    container_name: mailserver
+    hostname: mail.${DOMAIN}
+    ports:
+      - "25:25"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+    volumes:
+      - ./data/dms/mail-data/:/var/mail/
+      - ./data/dms/mail-state/:/var/mail-state/
+      - ./data/dms/mail-logs/:/var/log/mail/
+      - ./data/dms/config/:/tmp/docker-mailserver/
+      - /etc/letsencrypt:/etc/letsencrypt:ro      # certbot 인증서 (live/mail.<도메인>/)
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - SSL_TYPE=letsencrypt
+      - ENABLE_RSPAMD=1
+      - ENABLE_OPENDKIM=0
+      - ENABLE_OPENDMARC=0
+      - ENABLE_POLICYD_SPF=0
+      - ENABLE_AMAVIS=0
+      - ENABLE_SPAMASSASSIN=0
+      - ENABLE_CLAMAV=0
+      - MOVE_SPAM_TO_JUNK=1
+      - ENABLE_FAIL2BAN=1
+      - DEFAULT_RELAY_HOST=[${SES_SMTP_HOST}]:587
+      - RELAY_USER=${SES_SMTP_USER}
+      - RELAY_PASSWORD=${SES_SMTP_PASS}
+      - POSTMASTER_ADDRESS=postmaster@${DOMAIN}
+      - TZ=Asia/Seoul
+    cap_add:
+      - NET_ADMIN
+    networks:
+      default:
+        aliases:
+          - mail.${DOMAIN}
+    mem_limit: 1536m
+    cpus: 1.0
+    stop_grace_period: 1m
+
+  roundcube:
+    <<: *protect-app
+    image: roundcube/roundcubemail:${ROUNDCUBE_VERSION}
+    container_name: roundcube
+    ports:
+      - "127.0.0.1:8081:80"                       # Nginx → webmail.<도메인>
+    environment:
+      - ROUNDCUBEMAIL_DEFAULT_HOST=ssl://mail.${DOMAIN}
+      - ROUNDCUBEMAIL_DEFAULT_PORT=993
+      - ROUNDCUBEMAIL_SMTP_SERVER=ssl://mail.${DOMAIN}
+      - ROUNDCUBEMAIL_SMTP_PORT=465
+      - ROUNDCUBEMAIL_DB_TYPE=sqlite
+      - ROUNDCUBEMAIL_SKIN=elastic
+      - ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE=25M
+    volumes:
+      - ./data/roundcube/db:/var/roundcube/db
+    depends_on:
+      - mailserver
+    mem_limit: 256m
+    cpus: 0.5
+
+  listmonk-db:
+    <<: *protect-app
+    image: postgres:17-alpine
+    container_name: listmonk_db
+    environment:
+      - POSTGRES_USER=listmonk
+      - POSTGRES_PASSWORD=${LISTMONK_DB_PASSWORD}
+      - POSTGRES_DB=listmonk
+    volumes:
+      - ./data/listmonk-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U listmonk"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    mem_limit: 384m
+    cpus: 0.5
+
+  listmonk:
+    <<: *protect-app
+    image: listmonk/listmonk:${LISTMONK_VERSION}
+    container_name: listmonk
+    ports:
+      - "127.0.0.1:8082:9000"                     # Nginx → news.<도메인>
+    command: [sh, -c, "./listmonk --install --idempotent --yes --config '' && ./listmonk --upgrade --yes --config '' && ./listmonk --config ''"]
+    environment:
+      - LISTMONK_app__address=0.0.0.0:9000
+      - LISTMONK_db__host=listmonk-db
+      - LISTMONK_db__port=5432
+      - LISTMONK_db__user=listmonk
+      - LISTMONK_db__password=${LISTMONK_DB_PASSWORD}
+      - LISTMONK_db__database=listmonk
+      - LISTMONK_db__ssl_mode=disable
+      - LISTMONK_ADMIN_USER=${LISTMONK_ADMIN_USER}
+      - LISTMONK_ADMIN_PASSWORD=${LISTMONK_ADMIN_PASSWORD}
+      - TZ=Asia/Seoul
+    volumes:
+      - ./data/listmonk-uploads:/listmonk/uploads
+    depends_on:
+      listmonk-db:
+        condition: service_healthy
+    mem_limit: 256m
+    cpus: 0.5
