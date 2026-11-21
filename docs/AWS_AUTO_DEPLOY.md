@@ -20,7 +20,7 @@ bash infra/cloudshell_setup.sh
 
 5. 질문에 답하기: 도메인, 키 페어 이름(없으면 자동 생성), 내 PC IP, 알림 이메일, 서버 크기(t3.small 권장) → `yes`
 6. 키 페어를 새로 만든 경우 **작업 → 파일 다운로드** 로 `/home/cloudshell-user/mail-key.pem` 을 내 PC에 저장
-7. 끝나면 화면에 나온 "남은 일"대로 서버에 접속해 `.env` 입력 → `./scripts/02_start.sh`
+7. 끝나면 화면에 나온 "남은 일"대로 서버에 접속해 `.env` 입력 → `sudo ./scripts/install.sh` ([MAIL_SERVER_NATIVE.md](MAIL_SERVER_NATIVE.md))
 
 스크립트가 자동으로 판단하는 것:
 
@@ -38,7 +38,7 @@ bash infra/cloudshell_setup.sh
 
 | 구분 | 자원 | 설명 |
 |---|---|---|
-| 서버 | EC2 (Ubuntu 24.04, t3.medium, gp3 30GB 암호화) | 종료 방지, IMDSv2, 첫 부팅 시 Docker 등 초기 설정 자동 실행 |
+| 서버 | EC2 (Ubuntu 24.04, t3.medium, gp3 30GB 암호화) | 종료 방지, IMDSv2, 첫 부팅 시 기본 설정 자동 실행 (Docker 사용 안 함) |
 | 네트워크 | 보안 그룹, Elastic IP | 22번은 지정한 IP만, 메일·웹 포트 개방 |
 | 권한 | IAM 역할 | S3 백업 업로드, Session Manager(키 없이 콘솔 접속) |
 | 백업 | S3 버킷(30일 보관), AWS Backup(매일 03:00, 7일) | 스택을 지워도 S3 버킷은 남음 |
@@ -93,16 +93,15 @@ nano infra/params.env
 ./infra/post_deploy.sh ses
 
 # 5) 서버에 파일 복사 (비공개 저장소인 경우) — 출력된 IP 사용
-scp -i mail-key.pem -r mailserver ubuntu@<PublicIp>:/tmp/
+scp -i mail-key.pem -r mailserver-native ubuntu@<PublicIp>:/tmp/
 ssh -i mail-key.pem ubuntu@<PublicIp>
-sudo cp -r /tmp/mailserver/. /opt/mail/ && sudo chown -R ubuntu:ubuntu /opt/mail
-sudo /opt/mail/scripts/01_server_init.sh <회사도메인>   # 부팅 시 이미 실행됐다면 생략 가능
-exit   # 재접속
+sudo mkdir -p /opt/mail && sudo cp -r /tmp/mailserver-native/. /opt/mail/
+sudo /opt/mail/scripts/00_base.sh <회사도메인>
 
-# 6) 서버에서 메일 서비스 실행 (MAIL_SERVER_SETUP.md 3단계)
-cd /opt/mail && cp .env.example .env && chmod 600 .env && nano .env
+# 6) 서버에서 메일 서비스 설치 (Docker 없음, MAIL_SERVER_NATIVE.md)
+cd /opt/mail && sudo cp .env.example .env && sudo chmod 600 .env && sudo nano .env
 #   BACKUP_S3_BUCKET 은 /opt/mail/BACKUP_BUCKET.txt 값 입력
-./scripts/02_start.sh
+sudo ./scripts/install.sh
 
 # 7) listmonk 에서 Bounces → Enable SES 켠 뒤 (내 PC)
 ./infra/post_deploy.sh sns
@@ -149,6 +148,6 @@ cd /opt/mail && cp .env.example .env && chmod 600 .env && nano .env
 - [ ] 장애 알림 구독 승인 메일 클릭
 - [ ] `post_deploy.sh status` 에서 PTR = `mail.<도메인>.`
 - [ ] SES 두 도메인 DKIM `SUCCESS`, 구성 세트 연결
-- [ ] 서버에서 `02_start.sh` 완료
+- [ ] 서버에서 `sudo ./scripts/install.sh` 완료, `sudo ./scripts/status.sh` 정상
 - [ ] SNS 구독이 Confirmed (listmonk 웹훅)
 - [ ] AWS Backup 콘솔에 다음 날 복구 지점 생성 확인

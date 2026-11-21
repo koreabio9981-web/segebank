@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: >-
-  Company mail server (docker-mailserver + Roundcube + listmonk) on EC2,
+  Company mail server (Postfix + Dovecot + Rspamd + Roundcube + listmonk, no Docker) on EC2,
   outbound via Amazon SES. Creates EC2, security group, Elastic IP, IAM role,
   backup bucket, AWS Backup plan, alarms, budget, SES config set/SNS, and
   optionally Route 53 records and SES domain identities.
@@ -67,7 +67,7 @@ Parameters:
     Type: String
     Default: ""
     Description: >-
-      Optional git URL that contains the mailserver/ folder. Leave empty for a
+      Optional git URL that contains the mailserver-native/ folder. Leave empty for a
       private repo and copy the folder with scp after the stack is created.
   RepoBranch:
     Type: String
@@ -203,20 +203,19 @@ Resources:
             BRANCH_OPT=""
             [ -n "$REPO_BRANCH" ] && BRANCH_OPT="-b $REPO_BRANCH"
             if git clone --depth 1 $BRANCH_OPT "$REPO_URL" /tmp/repo; then
-              cp -r /tmp/repo/mailserver/. /opt/mail/ && rm -rf /tmp/repo
+              cp -r /tmp/repo/mailserver-native/. /opt/mail/ && rm -rf /tmp/repo
             else
-              echo "clone failed (private repo?) - copy mailserver/ with scp" > /opt/mail/README-COPY-FILES.txt
+              echo "clone failed (private repo?) - copy mailserver-native/ with scp" > /opt/mail/README-COPY-FILES.txt
             fi
           fi
           chown -R ubuntu:ubuntu /opt/mail
-          if [ -x /opt/mail/scripts/01_server_init.sh ]; then
-            /opt/mail/scripts/01_server_init.sh "$DOMAIN"
+          if [ -x /opt/mail/scripts/00_base.sh ]; then
+            /opt/mail/scripts/00_base.sh "$DOMAIN"
           else
-            # Minimal init so the server is ready when files are copied later
+            # Minimal base setup (no Docker); mail packages are installed later by install.sh
             timedatectl set-timezone Asia/Seoul
             hostnamectl set-hostname "mail.$DOMAIN"
-            curl -fsSL https://get.docker.com | sh
-            usermod -aG docker ubuntu
+            echo "127.0.1.1 mail.$DOMAIN mail" >> /etc/hosts
           fi
           # Write backup bucket into .env.example so backup.sh can upload to S3
           if [ -f /opt/mail/.env.example ]; then

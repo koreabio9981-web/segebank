@@ -1,5 +1,7 @@
 # 회사 메일 서버 구축 가이드 (AWS EC2 + Amazon SES)
 
+> **현재 사용하지 않는 Docker 방식 문서입니다.** 운영 환경에서 Docker를 쓰지 않으므로 [MAIL_SERVER_NATIVE.md](MAIL_SERVER_NATIVE.md)(직접 설치)를 따르세요. DNS·SES·listmonk 설정과 법규 내용은 그대로 참고할 수 있습니다.
+
 문의 메일을 받고(`info@회사도메인`) 고객에게 메일을 보내는(메일러) 자체 메일 서버를 만드는 절차입니다.
 설정 파일은 이 저장소의 `mailserver/` 폴더에 있습니다.
 

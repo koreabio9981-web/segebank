@@ -1,0 +1,24 @@
+[Unit]
+Description=listmonk (고객 발송 메일러)
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=listmonk
+Group=listmonk
+WorkingDirectory=/opt/listmonk
+EnvironmentFile=/opt/listmonk/admin.env
+ExecStartPre=/opt/listmonk/listmonk --config /opt/listmonk/config.toml --install --idempotent --yes
+ExecStartPre=/opt/listmonk/listmonk --config /opt/listmonk/config.toml --upgrade --yes
+ExecStart=/opt/listmonk/listmonk --config /opt/listmonk/config.toml
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

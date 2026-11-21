@@ -5,7 +5,7 @@
 #   1) 도메인·VPC·서브넷·키 페어·기존 DNS/SES 상태를 자동 조회해 params.env 생성
 #   2) CloudFormation 스택 배포 (EC2, 고정 IP, 방화벽, 백업, 경보, DNS)
 #   3) 역방향 DNS(PTR) 설정, SES 구성 세트 연결
-#   4) mailserver/ 설치 파일을 S3 → Session Manager 로 서버 /opt/mail 에 설치
+#   4) mailserver-native/ 설치 파일(Docker 없음)을 S3 → Session Manager 로 서버 /opt/mail 에 설치
 #
 # 사용법 (CloudShell):
 #   저장소 파일 업로드 후 압축 해제 → cd segebank → bash infra/cloudshell_setup.sh
@@ -22,7 +22,7 @@ c_wrn() { echo -e "  \033[33m!\033[0m $*"; }
 die()   { echo -e "\033[31m오류: $*\033[0m" >&2; exit 1; }
 ask()   { local p="$1" d="${2:-}" v; read -rp "  $p${d:+ [$d]}: " v; echo "${v:-$d}"; }
 
-[ -f infra/mail-server.yaml ] && [ -d mailserver ] || die "저장소 최상위 폴더(segebank)에서 실행하세요."
+[ -f infra/mail-server.yaml ] && [ -d mailserver-native ] || die "저장소 최상위 폴더(segebank)에서 실행하세요."
 command -v aws >/dev/null || die "AWS CLI 가 없습니다. AWS 콘솔의 CloudShell 에서 실행하세요."
 command -v dig >/dev/null || sudo dnf install -y -q bind-utils >/dev/null 2>&1 || true
 
@@ -155,7 +155,7 @@ else
 fi
 
 echo "== 8. 메일 서버 파일 설치 (Session Manager) =="
-tar -czf /tmp/mailserver.tgz -C "$ROOT" mailserver
+tar -czf /tmp/mailserver.tgz -C "$ROOT" mailserver-native
 aws s3 cp /tmp/mailserver.tgz "s3://$BUCKET/bootstrap/mailserver.tgz" --only-show-errors
 echo -n "  서버가 Session Manager 에 등록되길 기다리는 중"
 for _ in $(seq 1 40); do
@@ -172,10 +172,10 @@ cmds = [
   "command -v aws >/dev/null || snap install aws-cli --classic",
   "export PATH=$PATH:/snap/bin",
   f"aws s3 cp s3://{b}/bootstrap/mailserver.tgz /tmp/mailserver.tgz --region {r}",
-  "mkdir -p /opt/mail && tar -xzf /tmp/mailserver.tgz -C /tmp && cp -rn /tmp/mailserver/. /opt/mail/",
+  "mkdir -p /opt/mail && tar -xzf /tmp/mailserver.tgz -C /tmp && cp -rn /tmp/mailserver-native/. /opt/mail/",
   f"sed -i 's|^DOMAIN=.*|DOMAIN={d}|; s|^BACKUP_S3_BUCKET=.*|BACKUP_S3_BUCKET={b}|' /opt/mail/.env.example",
   "chmod +x /opt/mail/scripts/*.sh && chown -R ubuntu:ubuntu /opt/mail",
-  f"/opt/mail/scripts/01_server_init.sh {d}",
+  f"/opt/mail/scripts/00_base.sh {d}",
 ]
 print(json.dumps({"commands": cmds}))
 PY
@@ -202,6 +202,6 @@ echo "  알림 메일함의 'Subscription Confirmation' 링크를 눌러 장애 
 [ "$CREATE_DNS" = false ] && echo "  DNS: mail/webmail/news A → $IP, MX 10 mail.$DOMAIN, SPF 에 include:amazonses.com 추가"
 echo
 echo "  남은 일 (서버 접속 후):"
-echo "    sudo su - ubuntu && cd /opt/mail"
-echo "    cp .env.example .env && chmod 600 .env && nano .env   # SES SMTP, 메일러 비밀번호"
-echo "    ./scripts/02_start.sh"
+echo "    cd /opt/mail"
+echo "    sudo cp .env.example .env && sudo chmod 600 .env && sudo nano .env   # SES SMTP, 메일러 관리자 비밀번호"
+echo "    sudo ./scripts/install.sh      # Postfix·Dovecot·Rspamd·Roundcube·listmonk 설치 (약 10분)"
