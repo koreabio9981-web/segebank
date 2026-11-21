@@ -1,0 +1,466 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Company mail server (docker-mailserver + Roundcube + listmonk) on EC2,
+  outbound via Amazon SES. Creates EC2, security group, Elastic IP, IAM role,
+  backup bucket, AWS Backup plan, alarms, budget, SES config set/SNS, and
+  optionally Route 53 records and SES domain identities.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: { default: "1. Domain" }
+        Parameters: [DomainName, HostedZoneId, CreateDnsRecords, CreateSesIdentities]
+      - Label: { default: "2. Server" }
+        Parameters: [VpcId, SubnetId, InstanceType, DiskSizeGiB, KeyPairName, SshAllowedCidr, ImageId]
+      - Label: { default: "3. Install / Ops" }
+        Parameters: [RepoUrl, RepoBranch, AlertEmail, MonthlyBudgetUsd]
+
+Parameters:
+  DomainName:
+    Type: String
+    Description: Company domain without www/mail (e.g. example.com)
+    AllowedPattern: "^([a-z0-9]([a-z0-9-]*[a-z0-9])?\\.)+[a-z]{2,}$"
+  HostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: Route 53 hosted zone of the domain
+  CreateDnsRecords:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "true"
+    Description: >-
+      Create A/MX/SPF/DMARC records. Set false if MX or an SPF TXT record already
+      exists at the domain apex (stack creation would fail on conflict).
+  CreateSesIdentities:
+    Type: String
+    AllowedValues: ["true", "false"]
+    Default: "false"
+    Description: >-
+      Create SES identities for the domain and news.<domain> (Easy DKIM + custom
+      MAIL FROM). Keep false if you already created them in the SES console.
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC (the default VPC is fine)
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: PUBLIC subnet in that VPC
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.small, t3.medium, t3.large, t3a.medium, t3a.large]
+  DiskSizeGiB:
+    Type: Number
+    Default: 30
+    MinValue: 20
+    MaxValue: 500
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Existing EC2 key pair for SSH
+  SshAllowedCidr:
+    Type: String
+    Description: Your office/home IP for SSH, e.g. 203.0.113.10/32 (never 0.0.0.0/0)
+    AllowedPattern: "^([0-9]{1,3}\\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$"
+  ImageId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
+    Description: Ubuntu 24.04 LTS (latest, resolved from Canonical's public SSM parameter)
+  RepoUrl:
+    Type: String
+    Default: ""
+    Description: >-
+      Optional git URL that contains the mailserver/ folder. Leave empty for a
+      private repo and copy the folder with scp after the stack is created.
+  RepoBranch:
+    Type: String
+    Default: ""
+    Description: Optional branch of RepoUrl (empty = default branch)
+  AlertEmail:
+    Type: String
+    Description: Email that receives server alarms and budget alerts
+    AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+  MonthlyBudgetUsd:
+    Type: Number
+    Default: 70
+    MinValue: 10
+
+Conditions:
+  DoDns: !Equals [!Ref CreateDnsRecords, "true"]
+  DoSes: !Equals [!Ref CreateSesIdentities, "true"]
+  DoSesDns: !And [!Condition DoDns, !Condition DoSes]
+
+Resources:
+  # ───────────────────────── Network ─────────────────────────
+  MailSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Mail server (SMTP, submission, IMAPS, HTTP/S, SSH from admin IP)
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - { IpProtocol: tcp, FromPort: 22, ToPort: 22, CidrIp: !Ref SshAllowedCidr, Description: SSH admin }
+        - { IpProtocol: tcp, FromPort: 25, ToPort: 25, CidrIp: 0.0.0.0/0, Description: SMTP inbound }
+        - { IpProtocol: tcp, FromPort: 80, ToPort: 80, CidrIp: 0.0.0.0/0, Description: HTTP (ACME) }
+        - { IpProtocol: tcp, FromPort: 443, ToPort: 443, CidrIp: 0.0.0.0/0, Description: HTTPS }
+        - { IpProtocol: tcp, FromPort: 465, ToPort: 465, CidrIp: 0.0.0.0/0, Description: SMTPS submission }
+        - { IpProtocol: tcp, FromPort: 587, ToPort: 587, CidrIp: 0.0.0.0/0, Description: Submission }
+        - { IpProtocol: tcp, FromPort: 993, ToPort: 993, CidrIp: 0.0.0.0/0, Description: IMAPS }
+      Tags:
+        - { Key: Name, Value: !Sub "mail-${AWS::StackName}" }
+
+  # ───────────────────────── Backup bucket + IAM ─────────────────────────
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-30-days
+            Status: Enabled
+            ExpirationInDays: 30
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      Policies:
+        - PolicyName: mail-backup-s3
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [s3:PutObject, s3:GetObject]
+                Resource: !Sub "${BackupBucket.Arn}/*"
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt BackupBucket.Arn
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref InstanceRole]
+
+  # ───────────────────────── Server ─────────────────────────
+  MailLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        MetadataOptions:
+          HttpTokens: required          # IMDSv2 only
+          HttpPutResponseHopLimit: 2    # allow containers to read metadata if needed
+          HttpEndpoint: enabled
+
+  MailInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      SubnetId: !Ref SubnetId
+      SecurityGroupIds: [!Ref MailSecurityGroup]
+      IamInstanceProfile: !Ref InstanceProfile
+      DisableApiTermination: true
+      LaunchTemplate:
+        LaunchTemplateId: !Ref MailLaunchTemplate
+        Version: !GetAtt MailLaunchTemplate.LatestVersionNumber
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeType: gp3
+            VolumeSize: !Ref DiskSizeGiB
+            Encrypted: true
+            DeleteOnTermination: false
+      Tags:
+        - { Key: Name, Value: !Sub "mail.${DomainName}" }
+        - { Key: Backup, Value: mail-daily }
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # First boot: base OS setup + (optional) fetch mailserver files. Log: /var/log/mail-bootstrap.log
+          exec > /var/log/mail-bootstrap.log 2>&1
+          set -x
+          DOMAIN="${DomainName}"
+          REPO_URL="${RepoUrl}"
+          REPO_BRANCH="${RepoBranch}"
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -y
+          apt-get install -y git curl dnsutils
+          mkdir -p /opt/mail
+          if [ -n "$REPO_URL" ]; then
+            BRANCH_OPT=""
+            [ -n "$REPO_BRANCH" ] && BRANCH_OPT="-b $REPO_BRANCH"
+            if git clone --depth 1 $BRANCH_OPT "$REPO_URL" /tmp/repo; then
+              cp -r /tmp/repo/mailserver/. /opt/mail/ && rm -rf /tmp/repo
+            else
+              echo "clone failed (private repo?) - copy mailserver/ with scp" > /opt/mail/README-COPY-FILES.txt
+            fi
+          fi
+          chown -R ubuntu:ubuntu /opt/mail
+          if [ -x /opt/mail/scripts/01_server_init.sh ]; then
+            /opt/mail/scripts/01_server_init.sh "$DOMAIN"
+          else
+            # Minimal init so the server is ready when files are copied later
+            timedatectl set-timezone Asia/Seoul
+            hostnamectl set-hostname "mail.$DOMAIN"
+            curl -fsSL https://get.docker.com | sh
+            usermod -aG docker ubuntu
+          fi
+          # Write backup bucket into .env.example so backup.sh can upload to S3
+          if [ -f /opt/mail/.env.example ]; then
+            sed -i "s|^DOMAIN=.*|DOMAIN=$DOMAIN|; s|^BACKUP_S3_BUCKET=.*|BACKUP_S3_BUCKET=${BackupBucket}|" /opt/mail/.env.example
+          fi
+          echo "BACKUP_S3_BUCKET=${BackupBucket}" > /opt/mail/BACKUP_BUCKET.txt
+          touch /var/lib/mail-bootstrap-done
+
+  MailEip:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref MailInstance
+      Tags:
+        - { Key: Name, Value: !Sub "mail.${DomainName}" }
+
+  # ───────────────────────── Alarms ─────────────────────────
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Mail server alerts
+      Subscription:
+        - { Protocol: email, Endpoint: !Ref AlertEmail }
+
+  SystemCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Host failure - auto recover the instance
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Dimensions: [{ Name: InstanceId, Value: !Ref MailInstance }]
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Sub "arn:${AWS::Partition}:automate:${AWS::Region}:ec2:recover"
+        - !Ref AlertTopic
+
+  InstanceCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: OS not responding - reboot the instance
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_Instance
+      Dimensions: [{ Name: InstanceId, Value: !Ref MailInstance }]
+      Statistic: Maximum
+      Period: 60
+      EvaluationPeriods: 3
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      AlarmActions:
+        - !Sub "arn:${AWS::Partition}:automate:${AWS::Region}:ec2:reboot"
+        - !Ref AlertTopic
+
+  HighCpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CPU above 85% for 30 minutes
+      Namespace: AWS/EC2
+      MetricName: CPUUtilization
+      Dimensions: [{ Name: InstanceId, Value: !Ref MailInstance }]
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 6
+      Threshold: 85
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: [!Ref AlertTopic]
+
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: !Sub "mail-${AWS::StackName}"
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit: { Amount: !Ref MonthlyBudgetUsd, Unit: USD }
+      NotificationsWithSubscribers:
+        - Notification: { NotificationType: ACTUAL, ComparisonOperator: GREATER_THAN, Threshold: 80, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref AlertEmail }]
+        - Notification: { NotificationType: FORECASTED, ComparisonOperator: GREATER_THAN, Threshold: 100, ThresholdType: PERCENTAGE }
+          Subscribers: [{ SubscriptionType: EMAIL, Address: !Ref AlertEmail }]
+
+  # ───────────────────────── AWS Backup (daily EBS snapshot, 7 days) ─────────────────────────
+  BackupVault:
+    Type: AWS::Backup::BackupVault
+    Properties:
+      BackupVaultName: !Sub "mail-${AWS::StackName}"
+
+  BackupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: backup.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForRestores"
+
+  BackupPlan:
+    Type: AWS::Backup::BackupPlan
+    Properties:
+      BackupPlan:
+        BackupPlanName: !Sub "mail-${AWS::StackName}"
+        BackupPlanRule:
+          - RuleName: daily-7d
+            TargetBackupVault: !Ref BackupVault
+            ScheduleExpression: cron(0 18 * * ? *)   # 03:00 KST
+            StartWindowMinutes: 60
+            Lifecycle: { DeleteAfterDays: 7 }
+
+  BackupSelection:
+    Type: AWS::Backup::BackupSelection
+    Properties:
+      BackupPlanId: !Ref BackupPlan
+      BackupSelection:
+        SelectionName: mail-instance
+        IamRoleArn: !GetAtt BackupRole.Arn
+        Resources:
+          - !Sub "arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${MailInstance}"
+
+  # ───────────────────────── SES: bounce/complaint → SNS (for listmonk) ─────────────────────────
+  SesFeedbackTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: SES bounces and complaints
+
+  SesFeedbackTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics: [!Ref SesFeedbackTopic]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ses.amazonaws.com }
+            Action: sns:Publish
+            Resource: !Ref SesFeedbackTopic
+            Condition:
+              StringEquals: { "AWS:SourceAccount": !Ref AWS::AccountId }
+
+  SesConfigSet:
+    Type: AWS::SES::ConfigurationSet
+    Properties:
+      Name: !Sub "listmonk-${AWS::StackName}"
+
+  SesConfigSetEvents:
+    Type: AWS::SES::ConfigurationSetEventDestination
+    DependsOn: SesFeedbackTopicPolicy
+    Properties:
+      ConfigurationSetName: !Ref SesConfigSet
+      EventDestination:
+        Name: bounce-complaint-to-sns
+        Enabled: true
+        MatchingEventTypes: [bounce, complaint]
+        SnsDestination:
+          TopicARN: !Ref SesFeedbackTopic
+
+  # ───────────────────────── SES identities (optional) ─────────────────────────
+  SesDomainIdentity:
+    Type: AWS::SES::EmailIdentity
+    Condition: DoSes
+    Properties:
+      EmailIdentity: !Ref DomainName
+      DkimSigningAttributes: { NextSigningKeyLength: RSA_2048_BIT }
+      MailFromAttributes:
+        MailFromDomain: !Sub "bounce.${DomainName}"
+        BehaviorOnMxFailure: USE_DEFAULT_VALUE
+
+  SesNewsIdentity:
+    Type: AWS::SES::EmailIdentity
+    Condition: DoSes
+    Properties:
+      EmailIdentity: !Sub "news.${DomainName}"
+      DkimSigningAttributes: { NextSigningKeyLength: RSA_2048_BIT }
+      MailFromAttributes:
+        MailFromDomain: !Sub "bounce.news.${DomainName}"
+        BehaviorOnMxFailure: USE_DEFAULT_VALUE
+      ConfigurationSetAttributes:
+        ConfigurationSetName: !Ref SesConfigSet   # every news.* send reports bounces to listmonk
+
+  # ───────────────────────── Route 53 (optional) ─────────────────────────
+  DnsHosts:
+    Type: AWS::Route53::RecordSetGroup
+    Condition: DoDns
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+        - { Name: !Sub "mail.${DomainName}.", Type: A, TTL: "300", ResourceRecords: [!Ref MailEip] }
+        - { Name: !Sub "webmail.${DomainName}.", Type: A, TTL: "300", ResourceRecords: [!Ref MailEip] }
+        - { Name: !Sub "news.${DomainName}.", Type: A, TTL: "300", ResourceRecords: [!Ref MailEip] }
+        - { Name: !Sub "${DomainName}.", Type: MX, TTL: "300", ResourceRecords: [!Sub "10 mail.${DomainName}."] }
+        - { Name: !Sub "${DomainName}.", Type: TXT, TTL: "300", ResourceRecords: ['"v=spf1 include:amazonses.com -all"'] }
+        - Name: !Sub "_dmarc.${DomainName}."
+          Type: TXT
+          TTL: "300"
+          ResourceRecords: [!Sub '"v=DMARC1; p=none; rua=mailto:dmarc@${DomainName}"']
+        - Name: !Sub "_dmarc.news.${DomainName}."
+          Type: TXT
+          TTL: "300"
+          ResourceRecords: [!Sub '"v=DMARC1; p=none; rua=mailto:dmarc@${DomainName}"']
+
+  DnsSes:
+    Type: AWS::Route53::RecordSetGroup
+    Condition: DoSesDns
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+        # Easy DKIM CNAMEs
+        - { Name: !GetAtt SesDomainIdentity.DkimDNSTokenName1, Type: CNAME, TTL: "1800", ResourceRecords: [!GetAtt SesDomainIdentity.DkimDNSTokenValue1] }
+        - { Name: !GetAtt SesDomainIdentity.DkimDNSTokenName2, Type: CNAME, TTL: "1800", ResourceRecords: [!GetAtt SesDomainIdentity.DkimDNSTokenValue2] }
+        - { Name: !GetAtt SesDomainIdentity.DkimDNSTokenName3, Type: CNAME, TTL: "1800", ResourceRecords: [!GetAtt SesDomainIdentity.DkimDNSTokenValue3] }
+        - { Name: !GetAtt SesNewsIdentity.DkimDNSTokenName1, Type: CNAME, TTL: "1800", ResourceRecords: [!GetAtt SesNewsIdentity.DkimDNSTokenValue1] }
+        - { Name: !GetAtt SesNewsIdentity.DkimDNSTokenName2, Type: CNAME, TTL: "1800", ResourceRecords: [!GetAtt SesNewsIdentity.DkimDNSTokenValue2] }
+        - { Name: !GetAtt SesNewsIdentity.DkimDNSTokenName3, Type: CNAME, TTL: "1800", ResourceRecords: [!GetAtt SesNewsIdentity.DkimDNSTokenValue3] }
+        # Custom MAIL FROM (SPF alignment)
+        - { Name: !Sub "bounce.${DomainName}.", Type: MX, TTL: "300", ResourceRecords: [!Sub "10 feedback-smtp.${AWS::Region}.amazonses.com"] }
+        - { Name: !Sub "bounce.${DomainName}.", Type: TXT, TTL: "300", ResourceRecords: ['"v=spf1 include:amazonses.com ~all"'] }
+        - { Name: !Sub "bounce.news.${DomainName}.", Type: MX, TTL: "300", ResourceRecords: [!Sub "10 feedback-smtp.${AWS::Region}.amazonses.com"] }
+        - { Name: !Sub "bounce.news.${DomainName}.", Type: TXT, TTL: "300", ResourceRecords: ['"v=spf1 include:amazonses.com ~all"'] }
+
+Outputs:
+  PublicIp:
+    Description: Elastic IP of the mail server
+    Value: !Ref MailEip
+  EipAllocationId:
+    Description: Used by post_deploy.sh to set reverse DNS (PTR)
+    Value: !GetAtt MailEip.AllocationId
+  InstanceId:
+    Value: !Ref MailInstance
+  SshCommand:
+    Value: !Sub "ssh -i <your-key>.pem ubuntu@${MailEip}"
+  BackupBucketName:
+    Description: Put this in .env BACKUP_S3_BUCKET
+    Value: !Ref BackupBucket
+  SesConfigurationSet:
+    Description: SES configuration set that reports bounces/complaints to SNS
+    Value: !Ref SesConfigSet
+  SesFeedbackTopicArn:
+    Description: Subscribe listmonk webhook to this topic with post_deploy.sh sns
+    Value: !Ref SesFeedbackTopic
+  DomainName:
+    Value: !Ref DomainName
