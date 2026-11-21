@@ -3,6 +3,37 @@
 `infra/mail-server.yaml` 템플릿 하나로 메일 서버에 필요한 AWS 자원을 한 번에 만듭니다.
 [MAIL_SERVER_SETUP.md](MAIL_SERVER_SETUP.md)의 **1단계(EC2 준비)와 2단계(DNS) 대부분**을 대신합니다.
 
+## 가장 쉬운 방법: CloudShell 원스톱 설치 (권장)
+
+AWS 콘솔 안의 터미널(CloudShell)에서 스크립트 하나로 **서버 생성 → DNS → 역방향 DNS → 메일 서버 파일 설치**까지 끝냅니다.
+내 PC에 AWS CLI를 설치할 필요가 없습니다.
+
+1. GitHub 저장소 화면 → **Code → Download ZIP** 으로 내 PC에 저장
+2. AWS 콘솔 오른쪽 위 리전을 **서울**로 → 상단 검색창 옆 **CloudShell 아이콘(>_)** 클릭
+3. CloudShell 오른쪽 위 **작업 → 파일 업로드** → ZIP 선택
+4. 아래 명령 실행 (폴더 이름은 `ls` 로 확인)
+
+```bash
+unzip -q segebank-*.zip && cd segebank-*/
+bash infra/cloudshell_setup.sh
+```
+
+5. 질문에 답하기: 도메인, 키 페어 이름(없으면 자동 생성), 내 PC IP, 알림 이메일, 서버 크기(t3.small 권장) → `yes`
+6. 키 페어를 새로 만든 경우 **작업 → 파일 다운로드** 로 `/home/cloudshell-user/mail-key.pem` 을 내 PC에 저장
+7. 끝나면 화면에 나온 "남은 일"대로 서버에 접속해 `.env` 입력 → `./scripts/02_start.sh`
+
+스크립트가 자동으로 판단하는 것:
+
+| 항목 | 동작 |
+|---|---|
+| Route 53 호스팅 영역, 기본 VPC·서브넷 | 자동 조회 |
+| 루트 도메인에 MX·SPF 가 이미 있음 | DNS 자동 생성 끔 (기존 메일 보호), 직접 수정 안내 |
+| SES 도메인이 이미 인증됨 | 새로 만들지 않고 기존 것에 반송 알림 연결 |
+| 같은 이름의 메일 서버 EC2 가 이미 있음 | 중복 경고 |
+| 서버에 설치 파일 복사 | S3 → Session Manager (SSH·저장소 공개 불필요) |
+
+아래는 같은 작업을 단계별로 직접 하는 방법입니다.
+
 ## 자동으로 만들어지는 것
 
 | 구분 | 자원 | 설명 |
