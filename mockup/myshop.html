@@ -116,7 +116,7 @@ const V = {
 
   s1: ['개설 ① 주소 정하기', '쇼핑몰 만들기 (1/4)', () => `${prog(1)}
     <h3 style="font-size:17px;margin-bottom:6px">쇼핑몰 주소를 정해 주세요</h3><p class="help">손님이 들어오는 주소예요. 30일에 한 번 바꿀 수 있어요.</p>
-    <div class="slug"><input id="slug" value="${esc(S.slug || ME.id)}" autocomplete="off" oninput="this.value=this.value.toLowerCase();slugMsg()"><span>.segebank.co.kr</span></div>
+    <div class="slug"><input id="slug" value="${esc(S.slug || ME.id)}" autocomplete="off" oninput="this.value=this.value.toLowerCase();slugMsg()"><span>.sogaebank.com</span></div>
     <div class="msg" id="slugMsg"></div>
     <p class="help">예: kim01, minsu-health · 사용 불가: admin, 다른 회사 이름 등</p>`,
     () => `<button onclick="goS2()">다음</button>`],
@@ -139,13 +139,13 @@ const V = {
     <h3 style="font-size:17px;margin-bottom:12px">어떤 상품을 보여 줄까요?</h3>
     <label class="opt ${S.mode === 'ALL' ? 'on' : ''}" onclick="S.mode='ALL';save();draw()"><b>전체 상품 자동 진열 (추천)</b><span>새 상품도 자동으로 올라가요</span></label>
     <label class="opt ${S.mode === 'PICK' ? 'on' : ''}" onclick="S.mode='PICK';save();draw()"><b>내가 직접 고르기</b><span>개설 후 [진열 상품]에서 고를 수 있어요</span></label>
-    ${card('개설 전 확인', `<div class="row"><span class="t">주소</span><b style="font-size:13px">${esc(S.slug)}.segebank.co.kr</b></div><div class="row"><span class="t">이름</span><b style="font-size:13px">${esc(S.title)}</b></div><div class="row"><span class="t">디자인</span><b style="font-size:13px">${TPL[S.tpl][0]}</b></div>`)}
+    ${card('개설 전 확인', `<div class="row"><span class="t">주소</span><b style="font-size:13px">${esc(S.slug)}.sogaebank.com</b></div><div class="row"><span class="t">이름</span><b style="font-size:13px">${esc(S.title)}</b></div><div class="row"><span class="t">디자인</span><b style="font-size:13px">${TPL[S.tpl][0]}</b></div>`)}
     <label style="display:flex;gap:8px;font-size:12px;color:var(--sub)"><input type="checkbox" id="agree" style="width:auto" checked> 개인몰 운영 규칙(과장 광고 금지, 가격 변경 불가)에 동의합니다</label>`,
     () => `<button onclick="openShop()">내 쇼핑몰 열기</button>`],
 
   done: ['개설 완료 · 공유', '개설 완료', () => `
     <div style="text-align:center;padding:10px 0 4px"><div style="font-size:44px">🎉</div><h3 style="font-size:18px;margin:6px 0">${esc(S.title)}이(가) 열렸어요!</h3>
-      <div style="background:#fff;border-radius:10px;padding:12px;font-weight:700;color:var(--pri);margin:12px 0">${esc(S.slug)}.segebank.co.kr</div></div>
+      <div style="background:#fff;border-radius:10px;padding:12px;font-weight:700;color:var(--pri);margin:12px 0">${esc(S.slug)}.sogaebank.com</div></div>
     <div class="share"><a href="javascript:toast('주소를 복사했어요 (시안)')"><b>🔗</b>링크 복사</a><a href="javascript:void 0" onclick="document.getElementById('qrbox').style.display='block'"><b>▦</b>QR 코드</a><a href="javascript:toast('카카오톡 공유 창 (시안)')"><b>💬</b>카카오톡</a><a href="javascript:toast('휴대폰 공유 창 (시안)')"><b>📤</b>더보기</a></div>
     <div id="qrbox" style="display:none;text-align:center"><div class="qr"></div><span class="help">QR 코드 (시안 그림)</span></div>
     ${card('', `<b>📲 홈 화면에 추가하기</b><p class="help" style="margin:6px 0 0">내 쇼핑몰을 앱처럼 바로 열 수 있어요.<br>아이폰: 공유 → "홈 화면에 추가" / 안드로이드: 메뉴 → "앱 설치"</p>`)}`,
@@ -153,7 +153,7 @@ const V = {
 
   shop: ['개인몰 홈 (손님 화면)', null, () => { const [n, c, bg] = TPL[S.tpl]; const feat = shown().filter(p => S.featured.includes(p.no)), rest = shown().filter(p => !S.featured.includes(p.no));
     const pg = ps => `<div class="pg">${ps.map(p => `<a href="javascript:toast('상품 상세 → 주문 (본사 결제 화면, 시안)')">${thumb(p)}<div class="nm">${esc(p.name)}</div><div class="pr">${won(p.price)}</div><div class="help">PV ${p.pv}${p.status === '품절' ? ' · <span style="color:var(--bad)">품절</span>' : ''}</div></a>`).join('')}</div>`;
-    return `<div style="margin:-16px -16px 14px;background:${c};color:#fff;padding:18px 16px"><div style="font-size:12px;opacity:.8">${esc(S.slug)}.segebank.co.kr</div><div style="font-size:19px;font-weight:800">${esc(S.title)}</div></div>
+    return `<div style="margin:-16px -16px 14px;background:${c};color:#fff;padding:18px 16px"><div style="font-size:12px;opacity:.8">${esc(S.slug)}.sogaebank.com</div><div style="font-size:19px;font-weight:800">${esc(S.title)}</div></div>
       <div class="owner" style="background:${bg}"><div class="avatar">🙂</div><div><b>${ME.name}</b><div class="help" style="color:var(--ink)">${esc(S.intro)}</div></div></div>
       ${feat.length ? `<h3 style="font-size:15px;margin:0 0 10px"><span class="star">★</span> ${ME.name}님이 추천하는 상품</h3>${pg(feat)}<br>` : ''}
       <h3 style="font-size:15px;margin:0 0 10px">전체 상품</h3>${pg(rest)}
@@ -162,7 +162,7 @@ const V = {
     () => ''],
 
   manage: ['내 쇼핑몰 관리', '내 쇼핑몰', () => `
-    <div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:14px"><div class="help">${esc(S.slug)}.segebank.co.kr <span class="b ok">운영 중</span></div><div style="font-weight:700;font-size:16px;margin-top:2px">${esc(S.title)}</div></div>
+    <div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:14px"><div class="help">${esc(S.slug)}.sogaebank.com <span class="b ok">운영 중</span></div><div style="font-weight:700;font-size:16px;margin-top:2px">${esc(S.title)}</div></div>
     <div class="mini"><div><b>32</b><span>오늘 방문</span></div><div><b>2</b><span>오늘 주문</span></div><div><b>1</b><span>새 가입</span></div></div>
     <div class="share" style="margin-bottom:14px"><a href="#shop"><b>👀</b>미리보기</a><a href="#s3"><b>🎨</b>꾸미기</a><a href="#items"><b>📦</b>진열 상품</a><a href="#done"><b>📤</b>공유</a></div>
     ${card('이번 달 개인몰 실적', `<div class="row"><span class="t">회원 구매</span><b style="font-size:13px">${won(1240000)} · PV 1,050</b></div><div class="row"><span class="t">비회원(소비자) 구매</span><b style="font-size:13px">${won(386000)} · PV 320</b></div><div class="row"><span class="t">합계</span><b style="font-size:13px">${won(1626000)} · PV 1,370</b></div><a href="#stats" class="help" style="display:block;text-align:right;margin-top:6px;color:var(--pri)">자세히 →</a>`)}`,

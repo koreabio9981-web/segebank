@@ -18,7 +18,7 @@
 | 분양 종류 | **A. 회원 개인몰** · **B. 판매자 독립몰** · **C. 솔루션 분양(다른 회사)** |
 | 시스템 방식 | 프로그램 하나로 여러 사이트를 운영하는 **멀티 사이트 구조**. 접속 주소를 보고 어느 사이트인지 구분 |
 | 핵심 원칙 | **처음부터 모든 데이터에 "사이트 번호(tenant_id)"를 넣어 설계**. 나중에 C를 추가할 때 다시 만들지 않아도 됨 |
-| 주소 | 기본은 **하위 주소**(`kim01.segebank.co.kr`) 자동 발급. 원하면 **자기 도메인 연결**(2단계, 승인·유료) |
+| 주소 | 기본은 **하위 주소**(`kim01.sogaebank.com`) 자동 발급. 원하면 **자기 도메인 연결**(2단계, 승인·유료) |
 | 오픈 순서 | **1단계 A** → 2단계 B → 3단계 C |
 | 모바일 | 개인몰 만들기·관리·공유를 **휴대폰에서 모두** 가능하게. 분양 사이트마다 홈 화면 설치(PWA) 지원 |
 
@@ -37,7 +37,7 @@
 | 항목 | A. 회원 개인몰 | B. 판매자 독립몰 | C. 솔루션 분양 |
 |---|---|---|---|
 | 받는 사람 | 소개뱅크 회원(판매원) | 승인된 입점 판매자 | 다른 회사 |
-| 예시 주소 | `kim01.segebank.co.kr` | `greenfood.segebank.co.kr` | `abcmall.com` |
+| 예시 주소 | `kim01.sogaebank.com` | `greenfood.sogaebank.com` | `abcmall.com` |
 | 상품 | 본사·입점 판매자 상품 중 **골라서 진열** | **자기 상품만** | 그 회사가 직접 등록 |
 | 회원 | 소개뱅크 회원과 **공통** (가입하면 개인몰 주인이 추천인) | 소개뱅크 회원과 공통 | **완전히 별도** |
 | 주문·결제·배송 | 소개뱅크가 처리 | 소개뱅크가 처리, 배송은 판매자 | 그 회사가 처리(자기 PG 계약) |
@@ -58,19 +58,19 @@
                  └─────────────┬──────────────────────────────┬─────────────┘
                                ▼                              ▼
               사이트 1: 소개뱅크 (tenant_id=1)        사이트 2,3…: C 분양 업체
-              ├─ 소개뱅크 몰  segebank.co.kr           ├─ 업체 몰    abcmall.com
+              ├─ 소개뱅크 몰  sogaebank.com           ├─ 업체 몰    abcmall.com
               ├─ 오피스 / 판매자센터 / 관리자           ├─ 업체 관리자 (회원·상품·주문 따로)
-              ├─ A 회원 개인몰  kim01.segebank.co.kr   └─ (원하면 업체 안에서도 A·B 분양 가능)
-              └─ B 판매자 독립몰 greenfood.segebank.co.kr
+              ├─ A 회원 개인몰  kim01.sogaebank.com   └─ (원하면 업체 안에서도 A·B 분양 가능)
+              └─ B 판매자 독립몰 greenfood.sogaebank.com
 
    접속 주소 → [사이트 찾기] → tenant_id + storefront_id 결정 → 같은 프로그램이 다른 화면·데이터를 보여 줌
 ```
 
 ### 3-1. 주소로 사이트 찾는 순서
 
-1. 들어온 주소(예: `kim01.segebank.co.kr`)를 읽습니다.
+1. 들어온 주소(예: `kim01.sogaebank.com`)를 읽습니다.
 2. `domains` 표에서 찾습니다. 자기 도메인이 연결돼 있으면 여기서 찾아집니다.
-3. 없으면 하위 주소 규칙(`*.segebank.co.kr`)으로 `storefronts.slug = 'kim01'`을 찾습니다.
+3. 없으면 하위 주소 규칙(`*.sogaebank.com`)으로 `storefronts.slug = 'kim01'`을 찾습니다.
 4. 정지되었거나 없는 사이트면 안내 화면을 보여 줍니다.
 5. 결과(tenant_id, storefront_id, 디자인 설정)를 1분 동안 저장해 두고 다시 씁니다.
 
@@ -81,11 +81,11 @@ async function resolveSite(host) {
   let site = await db.oneOrNone(
     `SELECT d.tenant_id, d.storefront_id FROM domains d WHERE d.host=$1 AND d.status='ACTIVE'`, [host]);
   if (!site) {
-    const m = host.match(/^([a-z0-9-]{3,20})\.segebank\.co\.kr$/);
+    const m = host.match(/^([a-z0-9-]{3,20})\.sogaebank\.com$/);
     if (m) site = await db.oneOrNone(
       `SELECT tenant_id, id AS storefront_id FROM storefronts WHERE slug=$1 AND status='OPEN'`, [m[1]]);
   }
-  if (!site && host === 'segebank.co.kr') site = { tenant_id: 1, storefront_id: null };
+  if (!site && host === 'sogaebank.com') site = { tenant_id: 1, storefront_id: null };
   cache.set(host, site, 60);
   return site; // null이면 "없는 사이트" 화면
 }
@@ -194,7 +194,7 @@ async function resolveSite(host) {
 
 ## 7. 주소 방식 비교 (추천: 하위 주소 기본 + 자기 도메인은 2단계)
 
-| 항목 | ① 하위 주소 `kim01.segebank.co.kr` | ② 경로 주소 `segebank.co.kr/shop/kim01` | ③ 자기 도메인 `kimshop.com` |
+| 항목 | ① 하위 주소 `kim01.sogaebank.com` | ② 경로 주소 `sogaebank.com/shop/kim01` | ③ 자기 도메인 `kimshop.com` |
 |---|---|---|---|
 | 개설 속도 | 즉시 자동 | 즉시 자동 | 도메인 구입·연결 필요(수 시간~1일) |
 | 독립 사이트 느낌 | 좋음 | 약함 | 가장 좋음 |
@@ -206,13 +206,13 @@ async function resolveSite(host) {
 
 ### 7-1. 하위 주소 구성
 
-1. DNS에 `*.segebank.co.kr`을 서버로 연결합니다.
-2. AWS 인증서 서비스(ACM)에서 `*.segebank.co.kr` 와일드카드 인증서를 받습니다(무료).
+1. DNS에 `*.sogaebank.com`을 서버로 연결합니다.
+2. AWS 인증서 서비스(ACM)에서 `*.sogaebank.com` 와일드카드 인증서를 받습니다(무료).
 3. 로드밸런서(ALB)가 모든 하위 주소를 같은 서버로 보냅니다.
 
 ### 7-2. 자기 도메인 연결 (2단계)
 
-1. 신청자가 자기 도메인에 `CNAME → shops.segebank.co.kr` 설정
+1. 신청자가 자기 도메인에 `CNAME → shops.sogaebank.com` 설정
 2. 소개뱅크가 TXT 기록으로 도메인 소유를 확인
 3. 인증서를 자동 발급 → 연결 완료
 
@@ -310,13 +310,13 @@ CREATE POLICY tenant_isolation ON products USING (tenant_id = current_setting('a
 
 ```text
 ① 주소 정하기
-   [ kim01            ].segebank.co.kr
+   [ kim01            ].sogaebank.com
    ✔ 사용할 수 있는 주소입니다
 ② 몰 이름 [김민수의 건강한 장바구니] / 소개글 [ … ] / 사진 [📷]
 ③ 디자인 선택  [기본] [따뜻한] [깔끔한]  ← 미리보기 카드 좌우 넘김
 ④ 진열 방식  (●) 전체 상품 자동  ( ) 내가 고르기
 ⑤ [ 내 쇼핑몰 열기 ]
-   → 완료: "kim01.segebank.co.kr" [링크 복사] [QR] [카카오 공유] [홈 화면에 추가]
+   → 완료: "kim01.sogaebank.com" [링크 복사] [QR] [카카오 공유] [홈 화면에 추가]
 ```
 
 ### 10-2. 분양몰 홈 (손님이 보는 화면)
