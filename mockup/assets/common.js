@@ -4,15 +4,15 @@
 const SEED = {
   categories: ['식품', '건강', '생활', '뷰티', '가전'],
   members: [
-    {id:'kim01',name:'김민수',grade:'골드',sponsor:'root',status:'정상',joined:'2026-03-02',sales:4200000,pv:3800},
-    {id:'lee22',name:'이서연',grade:'실버',sponsor:'kim01',status:'정상',joined:'2026-05-11',sales:1850000,pv:1650},
-    {id:'park7',name:'박준호',grade:'일반',sponsor:'kim01',status:'정상',joined:'2026-07-20',sales:620000,pv:540},
-    {id:'yoon4',name:'윤지아',grade:'실버',sponsor:'kim01',status:'정상',joined:'2026-06-08',sales:1420000,pv:1300},
-    {id:'choi3',name:'최유진',grade:'실버',sponsor:'lee22',status:'정지',joined:'2026-08-03',sales:1100000,pv:990},
-    {id:'jung5',name:'정하늘',grade:'일반',sponsor:'lee22',status:'정상',joined:'2026-10-15',sales:330000,pv:300},
-    {id:'han9',name:'한도윤',grade:'일반',sponsor:'park7',status:'정상',joined:'2026-11-01',sales:150000,pv:120},
-    {id:'seo8',name:'서예준',grade:'일반',sponsor:'yoon4',status:'정상',joined:'2026-09-12',sales:280000,pv:250},
-    {id:'kang2',name:'강민재',grade:'일반',sponsor:'yoon4',status:'정상',joined:'2026-10-27',sales:330000,pv:300},
+    {id:'kim01',name:'김민수',grade:'골드',sponsor:'root',status:'정상',joined:'2026-03-02',sales:4200000,pv:6200000},
+    {id:'lee22',name:'이서연',grade:'실버',sponsor:'kim01',status:'정상',joined:'2026-05-11',sales:1850000,pv:1450000},
+    {id:'park7',name:'박준호',grade:'판매원',sponsor:'kim01',status:'정상',joined:'2026-07-20',sales:620000,pv:380000},
+    {id:'yoon4',name:'윤지아',grade:'실버',sponsor:'kim01',status:'정상',joined:'2026-06-08',sales:1420000,pv:1200000},
+    {id:'choi3',name:'최유진',grade:'실버',sponsor:'lee22',status:'정지',joined:'2026-08-03',sales:1100000,pv:1050000},
+    {id:'jung5',name:'정하늘',grade:'판매원',sponsor:'lee22',status:'정상',joined:'2026-10-15',sales:330000,pv:210000},
+    {id:'han9',name:'한도윤',grade:'판매원',sponsor:'park7',status:'정상',joined:'2026-11-01',sales:150000,pv:105000},
+    {id:'seo8',name:'서예준',grade:'판매원',sponsor:'yoon4',status:'정상',joined:'2026-09-12',sales:280000,pv:196000},
+    {id:'kang2',name:'강민재',grade:'판매원',sponsor:'yoon4',status:'정상',joined:'2026-10-27',sales:330000,pv:231000},
   ],
   sellers: [
     {id:'S001',user:'greenfood',company:'그린푸드',ceo:'오정민',bizNo:'123-45-67890',phone:'02-111-2222',email:'green@example.com',cat:'식품',status:'승인',applied:'2026-09-01',decided:'2026-09-02',reason:''},
@@ -39,15 +39,19 @@ const SEED = {
     {no:'O-26111005',buyer:'yoon4',items:[[205,2]],date:'2026-11-10',st:'구매확정',track:'한진 5100-2233'},
   ],
   bonuses: [
-    {date:'2026-11-24',type:'추천 수당',from:'lee22',amt:85000,st:'지급완료'},
-    {date:'2026-11-24',type:'직급 수당',from:'-',amt:42000,st:'지급완료'},
-    {date:'2026-11-26',type:'추천 수당',from:'yoon4',amt:61000,st:'정산예정'},
-    {date:'2026-11-26',type:'팀 수당',from:'-',amt:23000,st:'정산예정'},
+    {date:'2026-11-17~23',type:'직추천 수당',from:'lee22',amt:85000,st:'지급완료'},
+    {date:'2026-11-17~23',type:'바이너리 매칭',from:'소실적 1,240,000 PV',amt:62000,st:'지급완료'},
+    {date:'2026-10월',type:'롤업 수당',from:'1~7대',amt:118000,st:'지급완료'},
+    {date:'2026-10월',type:'직급 보너스',from:'골드 지분 1',amt:7200,st:'지급완료'},
+    {date:'2026-11-24~30',type:'직추천 수당',from:'yoon4',amt:61000,st:'정산예정'},
+    {date:'2026-11-24~30',type:'바이너리 매칭',from:'소실적 880,000 PV',amt:44000,st:'정산예정'},
   ],
   withdrawals: [
-    {no:'W-0031',who:'kim01',amt:300000,fee:9900,bank:'국민 ***-7890',date:'2026-11-24',st:'대기'},
-    {no:'W-0030',who:'lee22',amt:150000,fee:4950,bank:'신한 ***-1234',date:'2026-11-22',st:'지급완료'},
-    {no:'W-0029',who:'park7',amt:50000,fee:1650,bank:'농협 ***-5555',date:'2026-11-18',st:'반려'},
+    {no:'P-2026-1202',who:'kim01',amt:105000,fee:3460,bank:'국민 ***-7890',date:'2026-12-02',st:'지급예정'},
+    {no:'P-2026-1125',who:'kim01',amt:147000,fee:4850,bank:'국민 ***-7890',date:'2026-11-25',st:'지급완료'},
+    {no:'P-2026-1125',who:'lee22',amt:150000,fee:4950,bank:'신한 ***-1234',date:'2026-11-25',st:'지급완료'},
+    {no:'P-2026-1125',who:'park7',amt:8000,fee:0,bank:'농협 ***-5555',date:'2026-11-25',st:'이월'},
+    {no:'P-2026-1125',who:'jung5',amt:42000,fee:1380,bank:'-',date:'2026-11-25',st:'보류'},
   ],
   settlements: [
     {period:'2026-11 1차 (11/01~11/15)',seller:'S001',gross:1450000,rate:12,st:'지급완료'},
@@ -67,10 +71,13 @@ const SEED = {
   ],
 };
 
+/* PV = 공급가(판매가 ÷ 1.1, 부가세 제외) × 70% (기준서 v0.3 제2조, 시스템 자동 계산) */
+SEED.products.forEach(p => p.pv = Math.floor(p.price / 1.1 * 0.7));
+
 /* ===== 시안용 저장소 =====
    판매자 신청 → 관리자 승인 흐름을 화면끼리 이어서 보여 주려고 브라우저 저장소(localStorage)를 씁니다.
    실제 서비스에서는 서버 DB가 이 역할을 합니다. */
-const KEY = 'segebank-mock-v1';
+const KEY = 'segebank-mock-v2';
 const DB = (() => {
   let data;
   try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) { data = null; }
@@ -91,7 +98,7 @@ const orderTitle = o => { const p = productBy(o.items[0][0]); return (p ? p.name
 
 const BADGE = {
   정상:'ok',지급완료:'ok',승인:'ok',배송완료:'ok',구매확정:'ok',답변완료:'ok',판매중:'ok',
-  대기:'warn',승인대기:'warn',정산예정:'warn',답변대기:'warn',배송준비:'warn',
+  대기:'warn',승인대기:'warn',정산예정:'warn',지급예정:'warn',이월:'g',보류:'bad',답변대기:'warn',배송준비:'warn',
   결제완료:'n',배송중:'n',
   정지:'bad',반려:'bad',품절:'bad',판매중지:'bad',오류:'bad',
   숨김:'g',취소:'g',

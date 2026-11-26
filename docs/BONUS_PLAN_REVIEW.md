@@ -116,7 +116,7 @@
 
 ---
 
-> ✅ 대표 승인(2026-11-26): 수정안으로 진행. 규정 초안과 계산 설계는 [BONUS_PLAN_V1.md](BONUS_PLAN_V1.md), 시뮬레이션은 `simulation/sogaebank_bonus_simulation.xlsx`.
+> 이후 경과: 대표 제공 시뮬레이터(v0.2)를 거쳐 **[기준서 v0.3](BONUS_RULES_V0.3.md)(매칭 5%)**으로 확정되었습니다. 30% 수정안([V1](BONUS_PLAN_V1.md))은 비교용입니다.
 
 ## 5. 다음 단계
 

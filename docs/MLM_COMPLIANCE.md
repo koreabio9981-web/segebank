@@ -73,7 +73,7 @@
 | 기능 | 화면 위치 | 설명 | 연결 규칙 |
 |---|---|---|---|
 | F1 **공제번호 발급 연동** | 주문 완료, 마이페이지 | 결제 완료 시 공제조합에 거래 등록 → 공제번호를 주문에 저장하고 구매자에게 문자·화면으로 안내. 취소 시 공제 해지 | R7 |
-| F2 **수당 한도 관리** | 관리자 > 수당 정산 | 연간 누적 수당 ÷ 공급가 합계 실시간 표시. 30% 넘으면 경고, 35% 넘으면 확정 차단 | R1 |
+| F2 **수당 한도 관리** | 관리자 > 수당 정산 | 정산마다 지급률이 33%를 넘으면 전체 수당 자동 비례 삭감(기준서 제11조), 연간 누적 비율 35% 감시 대시보드 | R1 |
 | F3 **수당 규정 버전 관리** | 관리자 > 수당 규정 | 새 규정 등록 → 적용일이 3개월 이후인지 검사 → 판매원 전체 통지 → 적용일에 자동 전환. 오피스에 현재·예정 규정 공개 | R2 |
 | F4 **상품 가격 상한 검사** | 판매자 개별·일괄 등록 | 설정한 상한을 넘으면 등록 거부(일괄 등록 오류 줄에 표시) | R3 |
 | F5 **판매원 등록 절차** | 회원가입 | 판매원 약관 동의, 본인인증, **결격사유 확인 항목**, 등록증 발급. 가입비 0원 | R4, R8, R9 |
@@ -101,7 +101,7 @@ ALTER TABLE members ADD COLUMN distributor_no VARCHAR(20) UNIQUE,  -- 판매원 
 -- 수당 규정 버전
 CREATE TABLE bonus_plans (
   id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NOT NULL DEFAULT 1,
-  version VARCHAR(10) NOT NULL, rules JSONB NOT NULL,              -- 수당규정서 6장 형식
+  version VARCHAR(10) NOT NULL, rules JSONB NOT NULL,              -- 기준서 v0.3 부록 A 형식
   effective_from DATE NOT NULL, notified_at TIMESTAMPTZ,
   status VARCHAR(10) NOT NULL DEFAULT 'DRAFT',                     -- DRAFT/SCHEDULED/ACTIVE/RETIRED
   CHECK (notified_at IS NULL OR effective_from >= (notified_at::date + INTERVAL '3 months'))
@@ -136,7 +136,7 @@ FROM bonuses b GROUP BY 1;
 | [계획서](PLAN.md) | 판매 방식 결정 완료. **등록 준비 트랙**을 설계 일정과 함께 진행 |
 | [수당규정서](BONUS_PLAN_GUIDE.md) | 상한 **35%** 기준으로 작성. 여러 단계 수당 가능 |
 | [분양 설계](MALL_FRANCHISE_DESIGN.md) | A 회원 개인몰 = 판매원의 판매 채널. 개인몰 매출 수당도 35%에 포함. **C 분양 업체가 다단계 기능을 쓰려면 그 업체의 등록증 확인 후 기능을 켬** |
-| [시스템 설계](SEGEBANK_DESIGN.md) | 4장 기능 F1~F12 추가 |
+| [개발 설계서](dev/TECH_SPEC.md) · [schema.sql](dev/schema.sql) | F1~F12 반영(모듈·표·작업) |
 | 시안 | 다음 시안 수정 때 공제번호 표시, 판매원 등록증, 규정 버전 화면 추가 |
 
 ---

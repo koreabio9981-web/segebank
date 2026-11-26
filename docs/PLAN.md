@@ -29,10 +29,11 @@
 | ③ 사이트맵 | ✅ | [모바일 웹 설계](MOBILE_WEB_DESIGN.md) |
 | ④ 화면 설계 | ✅ 시안(몰·오피스·판매자센터·관리자·개인몰) | `mockup/` |
 | ⑤ 디자인 기준 | ✅ 기본 기준 + 홍보물 | [모바일 웹 설계](MOBILE_WEB_DESIGN.md) 5장 · `marketing/` |
-| ⑥ 시스템 설계 | ✅ (바이너리·포인트·분양 반영) | [시스템](SEGEBANK_DESIGN.md) · [분양](MALL_FRANCHISE_DESIGN.md) · [수당 v0.2](BONUS_PLAN_V2.md) |
+| ⑥ 시스템 설계 | ✅ (바이너리·포인트·분양 반영) | [시스템](SEGEBANK_DESIGN.md) · [분양](MALL_FRANCHISE_DESIGN.md) · [수당 기준서 v0.3](BONUS_RULES_V0.3.md) · [개발 설계서](dev/TECH_SPEC.md) |
 | ⑦ 외부 연동 목록 | ✅ 14개 연동, 계약 서류표 | [외부 연동](INTEGRATIONS.md) |
-| ⑧ 약관 초안 | ✅ 4종 초안(변호사 검토 필요) | [약관](terms/README.md) | 이용약관, 판매원 약관, 판매자 약관, 개인정보처리방침 |
+| ⑧ 약관 초안 | ✅ 4종 초안(변호사 검토 필요): 이용약관, 판매원 약관, 판매자 약관, 개인정보처리방침 | [약관](terms/README.md) |
 | ⑨ 개발 계획서 | ✅ 2인 기준 16~18주, P0~P5 | [개발 계획](DEV_PLAN.md) |
+| ⑩ 개발 설계 · 실행 플랜 | ✅ 설계 검토 40건 조치, 통합 스키마(검증), 스프린트 9개 | [검토](dev/REVIEW_2026-11-26.md) · [개발 설계서](dev/TECH_SPEC.md) · [schema.sql](dev/schema.sql) · [스프린트](dev/SPRINT_PLAN.md) |
 
 ## 1. 최종 목표
 

@@ -44,8 +44,8 @@
 | 정산 | 개인몰 주인: **실적·PV**(수당 규정에 따름) | 판매자 정산(수수료 차감) | 소개뱅크는 **이용료만** 받음 |
 | 디자인 | 기본 틀 3개 중 선택 + 로고·배너·소개글 | 틀 선택 + 색·로고·배너·메뉴 | 전체 꾸미기 |
 | 관리 화면 | 오피스 > **내 쇼핑몰** | 판매자센터 > **독립몰 관리** | 그 회사 전용 **관리자** |
-| 개설 | 신청 → 자동 개설(또는 관리자 승인, 설정 선택) | 신청 → 관리자 승인 | 계약 → 본사가 개설 |
-| 비용(예) | 무료 또는 월 이용료 | 월 이용료 또는 수수료 인상 | 개설비 + 월 이용료 |
+| 개설 | ✅ 신청 → **자동 개설** | 신청 → 관리자 승인 | 계약 → 본사가 개설 |
+| 비용(예) | ✅ **무료** | 월 이용료 또는 수수료 인상 | 개설비 + 월 이용료 |
 | 난이도 | 낮음 | 중간 | 높음 |
 
 ---
@@ -245,7 +245,7 @@ CREATE TABLE storefronts (
   theme JSONB NOT NULL DEFAULT '{}',          -- {"template":"basic","color":"#2457D6","logo":"…","banners":[…]}
   product_mode VARCHAR(10) DEFAULT 'ALL',     -- ALL(전체 자동) / PICK(직접 선택)
   commission_rate NUMERIC(5,2),               -- B 독립몰 별도 수수료
-  status VARCHAR(10) NOT NULL DEFAULT 'PENDING', -- PENDING / OPEN / SUSPENDED / CLOSED
+  status VARCHAR(10) NOT NULL DEFAULT 'OPEN', -- A 개인몰은 자동 개설(OPEN), B 독립몰은 PENDING으로 생성
   slug_changed_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE (tenant_id, slug)
 );

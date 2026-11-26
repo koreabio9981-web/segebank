@@ -69,7 +69,7 @@ function reapply(){ const s = ME(); s.status = '승인대기'; s.applied = today
 /* ===== 상품 개별 등록 ===== */
 function addProduct(){
   const g = id => document.getElementById(id).value.trim();
-  const row = {상품명:g('p_name'), 카테고리:g('p_cat'), 판매가:g('p_price'), 정가:g('p_list'), 재고:g('p_stock'), PV:g('p_pv'), 배송비:g('p_ship')};
+  const row = {상품명:g('p_name'), 카테고리:g('p_cat'), 판매가:g('p_price'), 정가:g('p_list'), 재고:g('p_stock'), 배송비:g('p_ship')};
   const errs = validateRow(row);
   if (errs.length) return toast(errs[0]);
   DB.products.unshift(toProduct(row, g('p_status')));
@@ -78,7 +78,7 @@ function addProduct(){
 
 /* ===== 상품 일괄 등록 =====
    양식(CSV) 내려받기 → 작성 → 업로드 → 줄마다 검사 → 정상 줄만 등록 */
-const COLS = ['상품명', '카테고리', '판매가', '정가', '재고', 'PV', '옵션', '대표이미지URL', '배송비', '상세설명'];
+const COLS = ['상품명', '카테고리', '판매가', '정가', '재고', '옵션', '대표이미지URL', '배송비', '상세설명'];
 const REQUIRED = ['상품명', '카테고리', '판매가', '재고'];
 let bulkRows = null;
 
@@ -87,7 +87,7 @@ function validateRow(r){
   REQUIRED.forEach(c => { if (!String(r[c] ?? '').trim()) e.push(`${c} 빈칸`); });
   if (r.상품명 && r.상품명.length > 60) e.push('상품명 60자 초과');
   if (r.카테고리 && !DB.categories.includes(r.카테고리)) e.push(`없는 카테고리(${r.카테고리})`);
-  ['판매가', '정가', '재고', 'PV', '배송비'].forEach(c => { if (r[c] && !/^\d+$/.test(String(r[c]).replace(/,/g, ''))) e.push(`${c} 숫자 아님`); });
+  ['판매가', '정가', '재고', '배송비'].forEach(c => { if (r[c] && !/^\d+$/.test(String(r[c]).replace(/,/g, ''))) e.push(`${c} 숫자 아님`); });
   const n = c => +String(r[c] || 0).replace(/,/g, '');
   if (r.판매가 && n('판매가') <= 0) e.push('판매가 0원');
   if (r.정가 && n('정가') && n('정가') < n('판매가')) e.push('정가가 판매가보다 낮음');
@@ -97,7 +97,7 @@ function toProduct(r, status = '판매중'){
   const n = c => +String(r[c] || 0).replace(/,/g, '');
   const colors = ['#d9534f', '#2e86c1', '#e0a800', '#48c9b0', '#8e44ad', '#5d6d7e'];
   return {no: Math.max(...DB.products.map(p => p.no)) + 1, seller: DB.currentSeller, name: r.상품명, cat: r.카테고리, price: n('판매가'), list: n('정가') || n('판매가'),
-    stock: n('재고'), pv: n('PV'), ship: n('배송비'), status: n('재고') === 0 && status === '판매중' ? '품절' : status, color: colors[DB.products.length % colors.length]};
+    stock: n('재고'), pv: Math.floor(n('판매가') / 1.1 * 0.7), ship: n('배송비'), status: n('재고') === 0 && status === '판매중' ? '품절' : status, color: colors[DB.products.length % colors.length]};
 }
 function parseCSV(text){
   text = text.replace(/^﻿/, '');
@@ -120,18 +120,18 @@ function download(name, text){
 }
 function downloadTemplate(){
   download('segebank_product_bulk_template.csv', toCSV([COLS,
-    ['유기농 사과 5kg', '식품', '39000', '45000', '100', '30', '크기:중/대', 'https://example.com/apple.jpg', '3000', '경북 청송 사과'],
-    ['천연 비누 3개입', '뷰티', '15000', '', '250', '10', '', '', '0', '']]));
+    ['유기농 사과 5kg', '식품', '39000', '45000', '100', '크기:중/대', 'https://example.com/apple.jpg', '3000', '경북 청송 사과'],
+    ['천연 비누 3개입', '뷰티', '15000', '', '250', '', '', '0', '']]));
   toast('양식을 내려받았습니다. 엑셀로 열어 작성 후 CSV로 저장하세요');
 }
 const SAMPLE = [COLS,
-  ['유기농 사과 5kg', '식품', '39000', '45000', '100', '30', '크기:중/대', '', '3000', '경북 청송 사과'],
-  ['천연 비누 3개입', '뷰티', '15000', '', '250', '10', '', '', '0', ''],
-  ['', '생활', '12000', '', '50', '5', '', '', '0', '상품명 빠진 줄'],
-  ['무선 청소기', '가전제품', '189000', '220000', '20', '150', '', '', '0', '카테고리 오타'],
-  ['현미 10kg', '식품', '삼만원', '', '30', '20', '', '', '0', '가격에 글자'],
-  ['수제 그래놀라 500g', '식품', '12900', '9900', '80', '10', '', '', '3000', '정가가 더 낮음'],
-  ['국산 들기름 350ml', '식품', '18500', '22000', '0', '15', '', '', '3000', '재고 0 → 품절로 등록'],
+  ['유기농 사과 5kg', '식품', '39000', '45000', '100', '크기:중/대', '', '3000', '경북 청송 사과'],
+  ['천연 비누 3개입', '뷰티', '15000', '', '250', '', '', '0', ''],
+  ['', '생활', '12000', '', '50', '', '', '0', '상품명 빠진 줄'],
+  ['무선 청소기', '가전제품', '189000', '220000', '20', '', '', '0', '카테고리 오타'],
+  ['현미 10kg', '식품', '삼만원', '', '30', '', '', '0', '가격에 글자'],
+  ['수제 그래놀라 500g', '식품', '12900', '9900', '80', '', '', '3000', '정가가 더 낮음'],
+  ['국산 들기름 350ml', '식품', '18500', '22000', '0', '', '', '3000', '재고 0 → 품절로 등록'],
 ];
 function loadRows(rows){
   const head = rows[0].map(h => h.trim().replace(/\*$/, ''));
@@ -164,12 +164,12 @@ function bulkView(){
     <label class="drop" id="drop">여기에 CSV 파일을 끌어다 놓거나 <b style="color:var(--pri)">눌러서 선택</b>하세요<br><span class="help">필수 열: ${REQUIRED.join(', ')} · 한 번에 최대 1,000줄</span>
       <input type="file" accept=".csv" style="display:none" onchange="readFile(this.files[0])"></label>
     <details style="margin-top:12px"><summary class="help">양식 작성 규칙 보기</summary>
-      ${table([['열', r => r[0]], ['필수', r => r[1]], ['규칙', r => r[2]]], [['상품명', '필수', '60자 이내'], ['카테고리', '필수', DB.categories.join(', ') + ' 중 하나'], ['판매가', '필수', '숫자만(원). 0보다 커야 함'], ['정가', '', '비우면 판매가와 같음. 판매가보다 낮으면 오류'], ['재고', '필수', '숫자. 0이면 품절로 등록'], ['PV', '', '회원 실적 점수(숫자)'], ['옵션', '', '예) 색상:빨강/파랑'], ['대표이미지URL', '', '비우면 등록 후 따로 올림'], ['배송비', '', '숫자. 비우면 0원(무료)'], ['상세설명', '', '자유 입력']])}</details>`);
+      ${table([['열', r => r[0]], ['필수', r => r[1]], ['규칙', r => r[2]]], [['상품명', '필수', '60자 이내'], ['카테고리', '필수', DB.categories.join(', ') + ' 중 하나'], ['판매가', '필수', '숫자만(원). 0보다 커야 함'], ['정가', '', '비우면 판매가와 같음. 판매가보다 낮으면 오류'], ['재고', '필수', '숫자. 0이면 품절로 등록'], ['옵션', '', '예) 색상:빨강/파랑'], ['대표이미지URL', '', '비우면 등록 후 따로 올림'], ['배송비', '', '숫자. 비우면 0원(무료)'], ['상세설명', '', '자유 입력']])}</details>`);
   if (step === 1) return steps + upload;
   const ok = bulkRows.filter(r => !r._err).length, bad = bulkRows.length - ok;
   return steps + card(`3. 검사 결과: 전체 ${bulkRows.length}줄 · 정상 ${ok} · 오류 ${bad}`, `
     ${bad ? `<div class="notice-box bad">오류가 있는 ${bad}줄은 등록되지 않습니다. 정상 줄만 먼저 등록하거나, 파일을 고쳐서 다시 올리세요.</div>` : '<div class="notice-box ok">모든 줄이 정상입니다.</div>'}
-    ${table([['줄', r => r._line], ['상품명', r => esc(r.상품명) || '<span class="help">(빈칸)</span>'], ['카테고리', r => esc(r.카테고리)], ['판매가', r => esc(r.판매가), 'r'], ['재고', r => esc(r.재고), 'r'], ['PV', r => esc(r.PV), 'r'],
+    ${table([['줄', r => r._line], ['상품명', r => esc(r.상품명) || '<span class="help">(빈칸)</span>'], ['카테고리', r => esc(r.카테고리)], ['판매가', r => esc(r.판매가), 'r'], ['재고', r => esc(r.재고), 'r'], ['PV(자동)', r => Math.floor((+String(r.판매가 || 0).replace(/,/g, '') || 0) / 1.1 * 0.7).toLocaleString(), 'r'],
       ['결과', r => r._err ? `<span class="b bad">오류</span> <span style="color:var(--bad);font-size:12px">${r._errs.join(', ')}</span>` : badge('정상')]], bulkRows)}
     <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button onclick="commitBulk()" ${ok ? '' : 'disabled'}>정상 ${ok}건 등록</button>${bad ? `<button class="ghost" onclick="downloadErrors(bulkRows.filter(r=>r._err))">오류 줄 내려받기</button>` : ''}<button class="ghost" onclick="bulkRows=null;rerender()">취소</button></div>`);
 }
@@ -199,7 +199,7 @@ sideApp({
           <div class="field"><label>판매가(원) <i>*</i></label><input id="p_price" type="number"></div>
           <div class="field"><label>정가(원)</label><input id="p_list" type="number" placeholder="할인 전 가격"></div>
           <div class="field"><label>재고 <i>*</i></label><input id="p_stock" type="number"></div>
-          <div class="field"><label>PV (회원 실적 점수)</label><input id="p_pv" type="number" placeholder="관리자 정책에 따름"></div>
+          <div class="field"><label>PV (자동 계산)</label><input disabled value="판매가 ÷ 1.1 × 70% (판매자 입력 불가)"></div>
           <div class="field"><label>배송비(원)</label><input id="p_ship" type="number" value="3000"></div>
           <div class="field"><label>판매 상태</label><select id="p_status"><option>판매중</option><option>숨김</option></select></div></div>`)
         + card('옵션', `<div class="field"><label>옵션 (예: 색상:빨강/파랑, 크기:S/M/L)</label><input placeholder="없으면 비워 두세요"></div>`)

@@ -6,7 +6,7 @@
 관련 문서:
 - [유료회원(포인트)](PAID_MEMBERSHIP_DESIGN.md)
 - [다단계 준비사항](MLM_COMPLIANCE.md)
-- [수당 규정 v0.1](BONUS_PLAN_V1.md)
+- [수당 기준서 v0.3](BONUS_RULES_V0.3.md)
 - [시스템 설계](SEGEBANK_DESIGN.md)
 
 ---
