@@ -1,7 +1,7 @@
 # 소개뱅크 개발 설계서 (Technical Spec v1.0)
 
 > 기준 문서(최신이 우선):
-> - 수당: [기준서 v0.3](../BONUS_RULES_V0.3.md)
+> - 수당: [기준서 v0.3](../BONUS_RULES_V0.3.md) + [v0.4 변경안(일간 정산)](../BONUS_RULES_V0.4.md) · [일간 정산 설계](../DAILY_SETTLEMENT_DESIGN.md)
 > - 판매 방식: [판매 방식](../SALES_MODEL_DESIGN.md)
 > - 유료회원: [유료회원 v1.1](../PAID_MEMBERSHIP_DESIGN.md)
 > - 분양: [분양](../MALL_FRANCHISE_DESIGN.md)
@@ -81,7 +81,7 @@ segebank/
 | fulfillment | 발주, 송장, 배송 조회, 반품 | shipments, returns | P2 |
 | settlement | 판매자 정산 | settlements, settlement_items | P2 |
 | bonus | 수당 정산 실행(엔진 호출), 비례 삭감, 회수 | bonus_plans, bonus_runs, bonus_items, binary_volume | P3 |
-| wallet | 수당 원장, **지급일 자동 지급**(신청 없음), 이체 배치, 주민번호 보관 | earnings_ledger, payout_batches, payout_items, distributor_tax_ids | P3 |
+| wallet | 수당 포인트 원장(**출금 가능 / 정산 대기**), 실시간 예상 수당, **회원 출금 신청**, 영업일 이체 배치, 주민번호 보관 | earnings_ledger, bonus_estimates, withdrawals, payout_batches, payout_items, distributor_tax_ids | P3 |
 | mutual-aid | 공제번호 발급·해지 | mutual_aid_records | P3 |
 | compliance | 35% 감시, 규정 변경 통지, 정보 공개 | (뷰), notifications | P3 |
 | points | 유료회원, 포인트 묶음·거래, 환불 | membership_plans, memberships, point_lots, point_tx | P4 |
@@ -119,8 +119,9 @@ segebank/
 판매자   PENDING → APPROVED ⇄ SUSPENDED ;  PENDING → REJECTED → PENDING(재신청)
 주문상품 PAID → PREPARING → SHIPPING → DELIVERED → CONFIRMED
                 └→ CANCELLED          └→ RETURN_REQUESTED → RETURNED
-수당정산 CALCULATED → REVIEWED → CONFIRMED → PAID   (CONFIRMED 전까지 재계산 가능)
-지급     (확정 수당) → payout_items READY → 배치 2인 승인 → PAID ;  HELD(주민번호·계좌 미등록) / CARRIED(1만 원 미만 이월) / FAILED(→ 다음 지급일)
+수당정산 DAILY: 매일 00:30 자동 CONFIRMED(이상치는 관리자 알림) · MONTHLY_TRUEUP: CALCULATED → REVIEWED → CONFIRMED(3일 반영)
+수당포인트 결제 → 예상(bonus_estimates) → 구매확정 → 일간 정산: AVAILABLE 90% + RESERVED 10% → 월말 확정: RESERVED 해제/조정
+출금     REQUESTED → (HELD: 주민번호·계좌·마이너스) → IN_BATCH(영업일 16:00) → PAID ; FAILED(잔액 복원)
 포인트   ISSUE / USE / RESTORE / REFUND / EXPIRE / ADJUST (point_tx 종류)
 공제     REQUESTED → ISSUED → CANCELLED ;  FAILED(재시도)
 ```
@@ -144,11 +145,11 @@ segebank/
 | 결제 | `POST /api/payments/prepare` · `/confirm` · `POST /api/payments/webhook` | 회원 · PG 서명 |
 | 회원 | `GET/PATCH /api/me` · `POST /api/distributor/register` · `GET /api/distributor/card` | 회원 |
 | 오피스 | `GET /api/office/summary` · `/sales` · `/bonuses?type=&from=&to=` · `/tree/sponsor?root=&depth=` · `/tree/binary?root=&depth=` · `/binary/volume` · `/rank` | 판매원 |
-| 지급 | `GET /api/office/payouts`(지급 예정·내역) · `PUT /api/me/bank-account` · `PUT /api/me/tax-id`(주민번호 1회 등록) | 판매원(재인증) |
+| 지갑·출금 | `GET /api/wallet`(출금 가능·정산 대기·쇼핑 전용·예상) · `GET /api/wallet/ledger` · `POST /api/withdrawals` · `GET /api/withdrawals` · `PUT /api/me/bank-account` · `PUT /api/me/tax-id` | 판매원(출금·계좌는 재인증) |
 | 포인트 | `POST /api/memberships/checkout` · `GET /api/points` · `POST /api/points/refund` | 회원 |
 | 개인몰 | `POST /api/storefronts` · `PATCH /api/storefronts/me` · `PUT /api/storefronts/me/products` · `GET /api/storefronts/check-slug?slug=` | 판매원 |
 | 판매자 | `POST /api/seller/apply` · `GET /api/seller/me` · `CRUD /api/seller/products` · `GET /api/seller/products/bulk/template` · `POST /api/seller/products/bulk` · `GET /bulk/:id` · `POST /bulk/:id/commit` · `GET /bulk/:id/errors` · `PATCH /api/seller/order-items/:id`(발주·송장) · `GET /api/seller/settlements` | 판매자(승인) |
-| 관리자 | `/api/admin/sellers*`(승인·반려·정지) · `/products*` · `/orders*` · `/members*` · `/bonus-runs`(계산·검토·확정) · `/bonus-plans`(버전·예약·통지) · `/payout-batches`(생성·2인 승인·결과) · `/settlements` · `/policy-unlocks` · `/settings` · `/compliance/cap`(35% 현황) · `/notices` · `/inquiries` | 관리자(2단계 인증) |
+| 관리자 | `/api/admin/sellers*`(승인·반려·정지) · `/products*` · `/orders*` · `/members*` · `/bonus-runs`(계산·검토·확정) · `/bonus-plans`(버전·예약·통지) · `/bonus-runs/daily`·`/bonus-runs/trueup`(월말 확정) · `/withdrawals`·`/payout-batches`(자동 승인 규칙·2인 승인·결과) · `/settlements` · `/policy-unlocks` · `/settings` · `/compliance/cap`(35% 현황) · `/notices` · `/inquiries` | 관리자(2단계 인증) |
 
 **공통 규칙**
 - 입력은 zod 스키마로 검증합니다.
@@ -198,7 +199,7 @@ src/bonus-engine/
   4. 소멸·상한·반품 회수
 
   위 결과가 엑셀과 일치해야 합니다.
-- **실행**: 주간 정산은 매주 월요일 02:00, 월간 정산은 매월 1일 03:00에 작업 대기열에서 실행됩니다. 결과는 CALCULATED 상태가 되고, 관리자 검토 후 확정합니다.
+- **실행**(기준서 v0.4): **일간 정산** 매일 00:30(전날 구매 확정분), **월말 확정** 매월 1일 03:00 계산 → 관리자 검토 → 3일 반영. 상세는 [일간 정산 설계](../DAILY_SETTLEMENT_DESIGN.md).
 
 ---
 
@@ -208,12 +209,15 @@ src/bonus-engine/
 |---|---|---|
 | bulk.validate / bulk.commit | 업로드 시 | 1,000줄 한도 |
 | order.autoConfirm | 매일 04:00 | 배송 완료 7일 경과 자동 구매 확정 |
-| bonus.weekly / bonus.monthly | 주간·월간 | 7장 |
+| bonus.daily | 매일 00:30 | 전날 구매 확정분 정산, 90%/10% 원장 기록, 알림 |
+| bonus.monthlyTrueup | 매월 1일 03:00 계산 → 3일 반영 | 그달 지급률 확인, 정산 대기 해제·조정 |
+| bonus.estimate | 결제·확정·반품 시 | 실시간 예상 수당 생성·갱신 |
+| qualification.daily | 매일 00:10 | 직전 30일 PV 자격 |
 | rank.evaluate | 매월 1일 02:00 | 직급 판정, rank_history |
 | points.expire / points.notify | 매일 | 30일·7일 전 알림 |
 | mutualAid.issue / retry | 결제 완료 시 · 10분 | 3회 실패 시 관리자 알림 |
-| payout.prepare | 주간 화요일·월간 10일 전날 | 확정 수당 → payout_items(보류·이월 판정) |
-| payout.export / payout.result | 관리자 2인 승인 시 | 펌뱅킹 |
+| payout.batch | 영업일 16:00 | 그날 출금 신청 → 배치(자동 승인 규칙 / 2인 승인) |
+| payout.export / payout.result | 배치 승인 시 | 펌뱅킹, 실패 시 잔액 복원 |
 | settlement.seller | 월 2회 | 판매자 정산 |
 | compliance.capCheck | 매일 | 33% 경고·35% 차단 플래그 |
 | ledger.reconcile | 매일 05:00 | 원장 합계 대조, 불일치 시 알림 |

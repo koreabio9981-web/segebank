@@ -273,7 +273,9 @@ CREATE TABLE bonus_plans (
 );
 CREATE TABLE bonus_runs (
   id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NOT NULL REFERENCES tenants(id),
-  plan_id BIGINT NOT NULL REFERENCES bonus_plans(id), kind VARCHAR(8) NOT NULL CHECK (kind IN ('WEEKLY','MONTHLY')),
+  plan_id BIGINT NOT NULL REFERENCES bonus_plans(id),
+  kind VARCHAR(16) NOT NULL CHECK (kind IN ('DAILY','MONTHLY_TRUEUP')),   -- 기준서 v0.4: 일간 정산 + 월말 확정
+  reserve_rate NUMERIC(7,4) NOT NULL DEFAULT 0.10,
   period_from DATE NOT NULL, period_to DATE NOT NULL,
   net_sales BIGINT, payout_before BIGINT, ratio_before NUMERIC(7,4), scale NUMERIC(7,4), payout_after BIGINT,
   status VARCHAR(10) NOT NULL DEFAULT 'CALCULATED' CHECK (status IN ('CALCULATED','REVIEWED','CONFIRMED','PAID')),
@@ -288,6 +290,18 @@ CREATE TABLE bonus_items (
   pv BIGINT, amount_before BIGINT NOT NULL, amount BIGINT NOT NULL, clawback_of BIGINT REFERENCES bonus_items(id)
 );
 CREATE INDEX bonus_items_user_idx ON bonus_items (user_id, run_id);
+CREATE TABLE bonus_estimates (                    -- 실시간 예상 수당(결제 즉시 표시, 잔액 아님)
+  id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NOT NULL REFERENCES tenants(id),
+  order_item_id BIGINT NOT NULL REFERENCES order_items(id), user_id BIGINT NOT NULL REFERENCES members(user_id),
+  type VARCHAR(10) NOT NULL CHECK (type IN ('DIRECT','BINARY','ROLLUP','RANK_POOL')), amount_est BIGINT NOT NULL,
+  status VARCHAR(18) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','CONFIRMED_PENDING','SETTLED','VOID')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX bonus_estimates_user_open ON bonus_estimates (user_id) WHERE status IN ('PENDING','CONFIRMED_PENDING');
+CREATE TABLE qualification_daily (                -- 직전 30일 PV(본인 + 개인몰 소비자) 자격
+  user_id BIGINT NOT NULL REFERENCES members(user_id), day DATE NOT NULL,
+  rolling_pv BIGINT NOT NULL, qualified BOOLEAN NOT NULL, PRIMARY KEY (user_id, day)
+);
 CREATE TABLE binary_volume (
   user_id BIGINT NOT NULL REFERENCES members(user_id), period_from DATE NOT NULL,
   left_new BIGINT NOT NULL DEFAULT 0, right_new BIGINT NOT NULL DEFAULT 0,
@@ -307,11 +321,18 @@ CREATE INDEX binary_carry_lots_open ON binary_carry_lots (user_id, side, origin_
 CREATE TABLE earnings_ledger (
   id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NOT NULL REFERENCES tenants(id),
   user_id BIGINT NOT NULL REFERENCES members(user_id),
-  kind VARCHAR(12) NOT NULL CHECK (kind IN ('BONUS','CLAWBACK','WITHHOLDING','PAYOUT','PAYOUT_FAIL','ADJUST')),
+  bucket VARCHAR(10) NOT NULL CHECK (bucket IN ('AVAILABLE','RESERVED')),   -- 출금 가능 / 정산 대기(유보)
+  kind VARCHAR(16) NOT NULL CHECK (kind IN ('DAILY_ACCRUAL','RESERVE_RELEASE','SCALING_ADJ','CARRY_ADJ','CLAWBACK',
+        'WITHDRAW_HOLD','WITHDRAW_PAID','WITHDRAW_FAIL','WITHHOLDING','ADJUST')),
   amount BIGINT NOT NULL, ref_type VARCHAR(20), ref_id BIGINT, memo TEXT, created_by BIGINT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX earnings_ledger_user_idx ON earnings_ledger (user_id, created_at);
+CREATE VIEW earnings_balances AS                  -- 지갑 화면용 잔액(원장 합계)
+SELECT user_id,
+       COALESCE(SUM(amount) FILTER (WHERE bucket = 'AVAILABLE'), 0) AS available,
+       COALESCE(SUM(amount) FILTER (WHERE bucket = 'RESERVED'), 0)  AS reserved
+FROM earnings_ledger GROUP BY user_id;
 CREATE TABLE payout_batches (
   id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NOT NULL REFERENCES tenants(id),
   kind VARCHAR(10) NOT NULL CHECK (kind IN ('BONUS','SETTLEMENT')), total BIGINT NOT NULL, count INT NOT NULL,
@@ -320,12 +341,22 @@ CREATE TABLE payout_batches (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CHECK (approved_by_2 IS NULL OR approved_by_1 <> approved_by_2)
 );
-CREATE TABLE payout_items (                       -- 지급일 자동 지급(기준서 제12조): 신청 없이 확정 수당을 배치로 이체
+CREATE TABLE withdrawals (                        -- 회원 출금 신청(기준서 v0.4 제12조)
+  id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NOT NULL REFERENCES tenants(id),
+  user_id BIGINT NOT NULL REFERENCES members(user_id),
+  amount BIGINT NOT NULL CHECK (amount >= 10000 AND amount % 1000 = 0),
+  withholding BIGINT NOT NULL, net BIGINT NOT NULL,
+  status VARCHAR(10) NOT NULL DEFAULT 'REQUESTED' CHECK (status IN ('REQUESTED','HELD','IN_BATCH','PAID','FAILED','CANCELLED')),
+  hold_reason VARCHAR(30), auto_approved BOOLEAN NOT NULL DEFAULT false,
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT now(), processed_at TIMESTAMPTZ
+);
+CREATE TABLE payout_items (                       -- 출금 신청 1건 = 1항목, 영업일 배치 이체
   id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NOT NULL REFERENCES tenants(id),
   batch_id BIGINT NOT NULL REFERENCES payout_batches(id), user_id BIGINT NOT NULL REFERENCES members(user_id),
+  withdrawal_id BIGINT REFERENCES withdrawals(id),
   gross BIGINT NOT NULL, withholding BIGINT NOT NULL, net BIGINT NOT NULL CHECK (net >= 0),
   status VARCHAR(10) NOT NULL DEFAULT 'READY' CHECK (status IN ('READY','HELD','PAID','FAILED','CARRIED')),
-  hold_reason VARCHAR(30),                        -- NO_TAX_ID / NO_BANK / BELOW_MIN / BANK_FAIL
+  hold_reason VARCHAR(30),                        -- NO_TAX_ID / NO_BANK / NEGATIVE_BALANCE / BANK_FAIL
   processed_at TIMESTAMPTZ
 );
 
@@ -355,7 +386,7 @@ CREATE VIEW bonus_cap_yearly AS
 SELECT r.tenant_id, date_trunc('year', r.period_from)::date AS year,
        SUM(r.payout_after) AS payout, SUM(r.net_sales) AS net_sales,
        CASE WHEN SUM(r.net_sales) > 0 THEN SUM(r.payout_after)::numeric / SUM(r.net_sales) END AS ratio
-FROM bonus_runs r WHERE r.status IN ('CONFIRMED','PAID') GROUP BY 1, 2;
+FROM bonus_runs r WHERE r.kind = 'DAILY' AND r.status IN ('CONFIRMED','PAID') GROUP BY 1, 2;
 
 -- ========== 행 단위 보안 (예: 모든 tenant 표에 같은 정책) ==========
 DO $$
@@ -363,7 +394,7 @@ DECLARE t TEXT;
 BEGIN
   FOREACH t IN ARRAY ARRAY['settings','users','terms_versions','consents','audit_logs','policy_unlocks','members','sellers',
     'categories','products','bulk_jobs','storefronts','domains','carts','orders','settlements','membership_plans',
-    'point_lots','point_tx','bonus_plans','bonus_runs','earnings_ledger','payout_batches','payout_items','notices','inquiries','notifications','distributor_tax_ids','sensitive_access_logs','memberships']
+    'point_lots','point_tx','bonus_plans','bonus_runs','earnings_ledger','payout_batches','payout_items','withdrawals','bonus_estimates','notices','inquiries','notifications','distributor_tax_ids','sensitive_access_logs','memberships']
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %I USING (tenant_id = current_setting(''app.tenant_id'', true)::bigint)', t);

@@ -18,7 +18,10 @@
 <script src="assets/common.js"></script>
 <script>
 const ME = DB.members[0]; // 데모: 김민수(kim01)
-const myBonus = () => DB.bonuses.reduce((s, b) => s + b.amt, 0);
+const myBonus = () => DB.bonuses.filter(b => b.st === '적립').reduce((s, b) => s + b.amt, 0);
+if (!DB.wallet) DB.wallet = {avail:468300, reserved:32800, shop:1575000, est:21000};
+const WALLET = DB.wallet;
+const pt = n => Number(n).toLocaleString('ko-KR') + 'P';
 const myOrders = () => DB.orders.filter(o => o.buyer === ME.id);
 
 sideApp({
@@ -33,13 +36,13 @@ sideApp({
           <a class="tile t1" href="mall.html"><div class="ic">🛒</div>쇼핑하기</a>
           <a class="tile t2" href="#sales"><div class="ic">📈</div>총매출<div class="v">${won(ME.sales)}</div></a>
           <a class="tile t3" href="#bonus"><div class="ic">🎁</div>이번 달 수당<div class="v">${won(myBonus())}</div></a>
-          <a class="tile t4" href="#payout"><div class="ic">💳</div>다음 지급(12/2)<div class="v">${won(105000)}</div></a>
+          <a class="tile t4" href="#wallet"><div class="ic">💳</div>출금 가능 포인트<div class="v">${pt(WALLET.avail)}</div></a>
           <a class="tile t5" href="#tree"><div class="ic">🌳</div>하위 회원<div class="v">${DB.members.length - 1}명</div></a>
           <a class="tile t6" href="#rank"><div class="ic">⭐</div>직급 · 누적 소실적 PV<div class="v">${ME.grade} · ${ME.pv.toLocaleString()}</div></a>
         </div>
         ${card('최근 매출 (5건)', table([['주문번호', r => r.no], ['상품', r => esc(orderTitle(r))], ['금액', r => won(orderTotal(r)), 'r'], ['상태', r => badge(r.st)]], myOrders().slice(0, 5)))}
         ${card('최근 수당 (5건)', table([['날짜', r => r.date], ['종류', r => r.type], ['금액', r => won(r.amt), 'r'], ['상태', r => badge(r.st)]], DB.bonuses.slice(0, 5)))}
-        ${card('수당 지급 (자동 지급)', table([['지급일', r => r.date], ['수당', r => won(r.amt), 'r'], ['원천징수 3.3%', r => won(r.fee), 'r'], ['실지급', r => won(r.amt - r.fee), 'r'], ['상태', r => badge(r.st)]], DB.withdrawals.filter(w => w.who === ME.id)))}`],
+        ${card('출금 내역', table([['신청일', r => r.date], ['신청액', r => won(r.amt), 'r'], ['원천징수 3.3%', r => won(r.fee), 'r'], ['실지급', r => won(r.amt - r.fee), 'r'], ['상태', r => badge(r.st)]], DB.withdrawals.filter(w => w.who === ME.id)))}`],
     }],
     ['매출', {
       sales: ['매출 내역', () => kpis([['총매출', won(ME.sales)], ['총 PV', ME.pv.toLocaleString()], ['이번 달 구매', won(myOrders().reduce((s, o) => s + orderTotal(o), 0))]])
@@ -50,21 +53,30 @@ sideApp({
     ['수당', {
       bonus: ['수당 내역', () => kpis([['이번 달 합계', won(myBonus())], ['지급 완료', won(DB.bonuses.filter(b => b.st === '지급완료').reduce((s, b) => s + b.amt, 0))], ['정산 예정', won(DB.bonuses.filter(b => b.st === '정산예정').reduce((s, b) => s + b.amt, 0))]])
         + card('수당 목록', periodBar('<select><option>전체 수당</option><option>직추천 수당</option><option>바이너리 매칭</option><option>롤업 수당</option><option>직급 보너스</option></select>')
-          + table([['정산 기간', r => r.date], ['종류', r => r.type], ['발생 근거', r => r.from], ['금액', r => won(r.amt), 'r'], ['비례 삭감', () => '없음(1.000)'], ['상태', r => badge(r.st)]], DB.bonuses))
-        + `<div class="notice-box ok">수당 기준서 v0.3: 직추천 10% · 바이너리 매칭(소실적) 5% · 롤업 1~10대 각 1%(직급별 개방) · 직급 보너스 3%. 정산 기간 지급률이 33%를 넘으면 모든 수당이 같은 비율로 조정되며, 이때 "비례 삭감" 칸에 표시됩니다.</div>`],
-      daily: ['정산별 합계', () => card('정산 기간별 합계 (주간: 직추천·매칭 / 월간: 롤업·직급 보너스)', `<div class="bar"><select style="max-width:200px"><option>2026-11</option><option>2026-10</option></select><button>조회</button></div>`
+          + table([['정산 기간', r => r.date], ['종류', r => r.type], ['발생 근거', r => r.from], ['금액', r => won(r.amt), 'r'], ['월말 확정', r => r.st === '예상' ? '구매 확정 후 정산' : '11월 말 확정 예정'], ['상태', r => badge(r.st)]], DB.bonuses))
+        + `<div class="notice-box ok">수당 기준서 v0.3: 직추천 10% · 바이너리 매칭(소실적) 5% · 롤업 1~10대 각 1%(직급별 개방) · 직급 보너스 3%. <b>매일 새벽 정산</b>되어 90%는 출금 가능, 10%는 월말 확정 전까지 정산 대기로 적립됩니다. 그달 지급률이 33%를 넘으면 정산 대기분에서 조정됩니다.</div>`],
+      daily: ['일별 정산', () => card('일별 정산 합계 (매일 00:30, 전날 구매 확정분)', `<div class="bar"><select style="max-width:200px"><option>2026-11</option><option>2026-10</option></select><button>조회</button></div>`
         + table([['정산 기간', r => r[0]], ['직추천', r => won(r[1]), 'r'], ['매칭', r => won(r[2]), 'r'], ['롤업', r => won(r[3]), 'r'], ['직급 보너스', r => won(r[4]), 'r'], ['삭감 계수', r => r[5]], ['합계', r => `<b>${won(r[1] + r[2] + r[3] + r[4])}</b>`, 'r']],
-          [['11/24~11/30 (주간)', 61000, 44000, 0, 0, '1.000'], ['11/17~11/23 (주간)', 85000, 62000, 0, 0, '1.000'], ['2026-10 (월간)', 0, 0, 118000, 7200, '1.000']]))],
+          [['11/26', 12300, 4400, 900, 240, '월말 확정 전'], ['11/25', 5300, 0, 620, 240, '월말 확정 전'], ['11/24', 9100, 3800, 410, 230, '월말 확정 전'], ['10월 합계(확정)', 210400, 96200, 18800, 7200, '1.000 (해제 완료)']]))],
       rank: ['내 직급 · 수당 자격', () => kpis([['현재 직급', ME.grade], ['누적 소실적 PV', ME.pv.toLocaleString()], ['다음 직급(플래티넘)까지', (20000000 - ME.pv).toLocaleString() + ' PV']])
         + card('이번 달 수당 자격 (본인 구매 + 개인몰 소비자 판매 PV ≥ 100,000)', `<div style="background:var(--line);border-radius:6px;height:14px;overflow:hidden"><div style="width:72%;height:100%;background:var(--pri)"></div></div>
           <p class="help" style="margin-top:8px">본인 구매 52,000 PV + 개인몰 소비자 판매 20,000 PV = <b>72,000 / 100,000 PV</b> · 이번 달 남은 기간에 채우면 수당 자격이 생깁니다.</p>`)
         + card('직급 기준 (기준서 제6조, 직급은 내려가지 않음)', table([['직급', r => r[0]], ['누적 소실적 PV', r => r[1].toLocaleString(), 'r'], ['롤업 개방', r => r[2] + '대', 'r'], ['보너스 지분', r => r[3], 'r']],
           [['판매원', 0, 3, 0], ['실버', 1000000, 5, 0], ['골드', 5000000, 7, 1], ['플래티넘', 20000000, 9, 2], ['다이아몬드', 50000000, 10, 4]]))],
     }],
-    ['수당 지급', {
-      payout: ['지급 예정 · 내역', () => kpis([['다음 지급일', '12월 2일(화)'], ['지급 예정 수당', won(105000)], ['원천징수 3.3%', '−' + won(3460)], ['실지급 예정', won(101540)]])
-        + `<div class="notice-box">수당은 <b>신청하지 않아도</b> 지급일(주간 화요일, 월간 10일)에 본인 계좌로 자동 지급됩니다. 1만 원 미만은 다음 지급일로 이월됩니다. 3.3%는 수수료가 아니라 사업소득 원천징수(소득세 3% + 지방소득세 0.3%)입니다.</div>`
-        + card('지급 내역', periodBar() + table([['지급일', r => r.date], ['수당', r => won(r.amt), 'r'], ['원천징수', r => won(r.fee), 'r'], ['실지급', r => won(r.amt - r.fee), 'r'], ['계좌', r => r.bank], ['상태', r => badge(r.st)]], DB.withdrawals.filter(w => w.who === ME.id)))],
+    ['포인트 지갑', {
+      wallet: ['내 포인트 지갑', () => `
+        <div class="grid">
+          <div class="card kpi" style="border-top:4px solid var(--ok)"><div class="l">출금 가능</div><div class="v">${pt(WALLET.avail)}</div><div class="help">확정 수당의 90% + 월말 해제분 · 1P = 1원</div></div>
+          <div class="card kpi"><div class="l">출금 불가 · 정산 대기</div><div class="v">${pt(WALLET.reserved)}</div><div class="help">12/3 월말 확정 후 출금 가능으로 이동</div></div>
+          <div class="card kpi"><div class="l">출금 불가 · 쇼핑 전용</div><div class="v">${pt(WALLET.shop)}</div><div class="help">충전·보너스 포인트, 적립금 · <a href="mall.html" style="color:var(--pri)">쇼핑하기</a></div></div>
+          <div class="card kpi"><div class="l">예상 수당 (구매 확정 전)</div><div class="v">+${pt(WALLET.est)}</div><div class="help">잔액 아님 · 확정 다음 날 새벽 정산</div></div>
+        </div>`
+        + card('출금 신청', `<div class="form2"><div class="field"><label>신청 금액 (1만 원 이상, 1천 원 단위)</label><input id="wamt" type="number" step="1000" placeholder="예: 100000" oninput="calcW()"></div>
+          <div class="field"><label>원천징수 3.3% / 실지급액</label><input id="wres" disabled value="0원 / 0원"></div></div>
+          <p class="help">3.3%는 수수료가 아니라 사업소득 원천징수(소득세 3% + 지방소득세 0.3%)입니다. 신청 다음 영업일에 국민 ***-7890으로 입금됩니다.</p>
+          <button onclick="applyW()">출금 신청</button> <a class="btn ghost" href="#bank">계좌·주민번호 등록</a>`)
+        + card('출금 내역', table([['신청일', r => r.date], ['신청액', r => won(r.amt), 'r'], ['원천징수', r => won(r.fee), 'r'], ['실지급', r => won(r.amt - r.fee), 'r'], ['상태', r => badge(r.st)]], DB.withdrawals.filter(w => w.who === ME.id)))],
     }],
     ['조직', {
       binary: ['바이너리 조직도', () => kpis([['좌 실적(이번 주+이월)', '1,240,000 PV'], ['우 실적(이번 주+이월)', '880,000 PV'], ['예상 매칭(소실적 × 5%)', won(44000)], ['다음 주 이월', '좌 360,000 PV']])
@@ -101,6 +113,15 @@ sideApp({
   ],
 });
 
+function calcW(){ const v = +document.getElementById('wamt').value || 0; const f = Math.round(v * 0.033 / 10) * 10; document.getElementById('wres').value = `${won(f)} / ${won(v - f)}`; }
+function applyW(){
+  const v = +document.getElementById('wamt').value || 0;
+  if (v < 10000 || v % 1000) return toast('1만 원 이상, 1천 원 단위로 입력하세요');
+  if (v > WALLET.avail) return toast('출금 가능 포인트를 넘었습니다');
+  WALLET.avail -= v;
+  DB.withdrawals.unshift({no:'W-' + String(DB.withdrawals.length + 105).padStart(4, '0'), who:ME.id, amt:v, fee:Math.round(v * 0.033 / 10) * 10, bank:'국민 ***-7890', date:today(), st:'신청'});
+  save(); toast('출금 신청했습니다. 다음 영업일에 입금됩니다'); rerender();
+}
 function addQ(){
   const t = document.getElementById('qt').value.trim(); if (!t) return toast('제목을 입력하세요');
   DB.inquiries.unshift({t, who:ME.id, to:'관리자', d:today(), st:'답변대기', a:''}); save(); toast('문의를 등록했습니다'); rerender();

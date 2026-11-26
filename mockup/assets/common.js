@@ -39,19 +39,18 @@ const SEED = {
     {no:'O-26111005',buyer:'yoon4',items:[[205,2]],date:'2026-11-10',st:'구매확정',track:'한진 5100-2233'},
   ],
   bonuses: [
-    {date:'2026-11-17~23',type:'직추천 수당',from:'lee22',amt:85000,st:'지급완료'},
-    {date:'2026-11-17~23',type:'바이너리 매칭',from:'소실적 1,240,000 PV',amt:62000,st:'지급완료'},
-    {date:'2026-10월',type:'롤업 수당',from:'1~7대',amt:118000,st:'지급완료'},
-    {date:'2026-10월',type:'직급 보너스',from:'골드 지분 1',amt:7200,st:'지급완료'},
-    {date:'2026-11-24~30',type:'직추천 수당',from:'yoon4',amt:61000,st:'정산예정'},
-    {date:'2026-11-24~30',type:'바이너리 매칭',from:'소실적 880,000 PV',amt:44000,st:'정산예정'},
+    {date:'2026-11-26',type:'직추천 수당',from:'yoon4 구매 확정',amt:7000,st:'예상'},
+    {date:'2026-11-26',type:'직추천 수당',from:'lee22 구매 확정',amt:12300,st:'적립'},
+    {date:'2026-11-26',type:'바이너리 매칭',from:'소실적 88,000 PV',amt:4400,st:'적립'},
+    {date:'2026-11-26',type:'롤업 수당',from:'1~7대',amt:900,st:'적립'},
+    {date:'2026-11-25',type:'직급 보너스',from:'골드 지분 1',amt:240,st:'적립'},
+    {date:'2026-11-25',type:'직추천 수당',from:'park7 구매 확정',amt:5300,st:'적립'},
   ],
   withdrawals: [
-    {no:'P-2026-1202',who:'kim01',amt:105000,fee:3460,bank:'국민 ***-7890',date:'2026-12-02',st:'지급예정'},
-    {no:'P-2026-1125',who:'kim01',amt:147000,fee:4850,bank:'국민 ***-7890',date:'2026-11-25',st:'지급완료'},
-    {no:'P-2026-1125',who:'lee22',amt:150000,fee:4950,bank:'신한 ***-1234',date:'2026-11-25',st:'지급완료'},
-    {no:'P-2026-1125',who:'park7',amt:8000,fee:0,bank:'농협 ***-5555',date:'2026-11-25',st:'이월'},
-    {no:'P-2026-1125',who:'jung5',amt:42000,fee:1380,bank:'-',date:'2026-11-25',st:'보류'},
+    {no:'W-0104',who:'kim01',amt:100000,fee:3300,bank:'국민 ***-7890',date:'2026-11-26',st:'신청'},
+    {no:'W-0103',who:'lee22',amt:50000,fee:1650,bank:'신한 ***-1234',date:'2026-11-26',st:'신청'},
+    {no:'W-0102',who:'jung5',amt:30000,fee:990,bank:'-',date:'2026-11-26',st:'보류'},
+    {no:'W-0098',who:'kim01',amt:150000,fee:4950,bank:'국민 ***-7890',date:'2026-11-24',st:'출금완료'},
   ],
   settlements: [
     {period:'2026-11 1차 (11/01~11/15)',seller:'S001',gross:1450000,rate:12,st:'지급완료'},
@@ -77,7 +76,7 @@ SEED.products.forEach(p => p.pv = Math.floor(p.price / 1.1 * 0.7));
 /* ===== 시안용 저장소 =====
    판매자 신청 → 관리자 승인 흐름을 화면끼리 이어서 보여 주려고 브라우저 저장소(localStorage)를 씁니다.
    실제 서비스에서는 서버 DB가 이 역할을 합니다. */
-const KEY = 'segebank-mock-v2';
+const KEY = 'segebank-mock-v3';
 const DB = (() => {
   let data;
   try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) { data = null; }
@@ -98,7 +97,7 @@ const orderTitle = o => { const p = productBy(o.items[0][0]); return (p ? p.name
 
 const BADGE = {
   정상:'ok',지급완료:'ok',승인:'ok',배송완료:'ok',구매확정:'ok',답변완료:'ok',판매중:'ok',
-  대기:'warn',승인대기:'warn',정산예정:'warn',지급예정:'warn',이월:'g',보류:'bad',답변대기:'warn',배송준비:'warn',
+  대기:'warn',승인대기:'warn',정산예정:'warn',지급예정:'warn',이월:'g',보류:'bad',신청:'warn',출금완료:'ok',적립:'ok',예상:'n',답변대기:'warn',배송준비:'warn',
   결제완료:'n',배송중:'n',
   정지:'bad',반려:'bad',품절:'bad',판매중지:'bad',오류:'bad',
   숨김:'g',취소:'g',
