@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소개뱅크 회원 오피스 시안</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+  .tile{border-radius:12px;padding:16px;text-align:center;font-weight:600;display:block}
+  .tile .ic{font-size:22px}.tile .v{font-size:18px;margin-top:4px}
+  .t1{background:#ffe1c7}.t2{background:#ffd5d5}.t3{background:#fff2a8}.t4{background:#cfe9ff}.t5{background:#e6dcff}.t6{background:#d6f5e3}
+  .refcode{display:flex;justify-content:space-between;align-items:center;background:var(--pri);color:#fff;border-radius:12px;padding:16px 18px;margin-bottom:18px;gap:10px;flex-wrap:wrap}
+  .refcode button{background:#fff;color:var(--pri)}
+</style>
+</head>
+<body>
+<script src="assets/common.js"></script>
+<script>
+const ME = DB.members[0]; // 데모: 김민수(kim01)
+const myBonus = () => DB.bonuses.reduce((s, b) => s + b.amt, 0);
+const myOrders = () => DB.orders.filter(o => o.buyer === ME.id);
+
+sideApp({
+  brand: '오피스',
+  role: () => `회원 · ${ME.name}(${ME.id}) · ${ME.grade}`,
+  menus: [
+    ['홈', {
+      dash: ['오피스 홈', () => `
+        <div class="refcode"><div><div style="font-size:12px;opacity:.8">내 추천 코드</div><div style="font-size:20px;font-weight:700">${ME.id}</div></div>
+          <button onclick="toast('추천 코드를 복사했습니다 (시안)')">추천 코드 복사</button></div>
+        <div class="tiles">
+          <a class="tile t1" href="mall.html"><div class="ic">🛒</div>쇼핑하기</a>
+          <a class="tile t2" href="#sales"><div class="ic">📈</div>총매출<div class="v">${won(ME.sales)}</div></a>
+          <a class="tile t3" href="#bonus"><div class="ic">🎁</div>이번 달 수당<div class="v">${won(myBonus())}</div></a>
+          <a class="tile t4" href="#withdraw"><div class="ic">💳</div>출금 가능<div class="v">${won(468000)}</div></a>
+          <a class="tile t5" href="#tree"><div class="ic">🌳</div>하위 회원<div class="v">${DB.members.length - 1}명</div></a>
+          <a class="tile t6" href="#sales"><div class="ic">⭐</div>누적 PV<div class="v">${ME.pv.toLocaleString()}</div></a>
+        </div>
+        ${card('최근 매출 (5건)', table([['주문번호', r => r.no], ['상품', r => esc(orderTitle(r))], ['금액', r => won(orderTotal(r)), 'r'], ['상태', r => badge(r.st)]], myOrders().slice(0, 5)))}
+        ${card('최근 수당 (5건)', table([['날짜', r => r.date], ['종류', r => r.type], ['금액', r => won(r.amt), 'r'], ['상태', r => badge(r.st)]], DB.bonuses.slice(0, 5)))}
+        ${card('최근 출금 (5건)', table([['신청일', r => r.date], ['금액', r => won(r.amt), 'r'], ['상태', r => badge(r.st)]], DB.withdrawals.filter(w => w.who === ME.id)))}`],
+    }],
+    ['매출', {
+      sales: ['매출 내역', () => kpis([['총매출', won(ME.sales)], ['총 PV', ME.pv.toLocaleString()], ['이번 달 구매', won(myOrders().reduce((s, o) => s + orderTotal(o), 0))]])
+        + card('구매 내역', periodBar() + table([['주문번호', r => r.no], ['주문일', r => r.date], ['상품', r => esc(orderTitle(r))], ['금액', r => won(orderTotal(r)), 'r'],
+          ['PV', r => r.items.reduce((s, [no, q]) => s + (productBy(no)?.pv || 0) * q, 0), 'r'], ['상태', r => badge(r.st)]], myOrders()))
+        + `<p class="help">매출(구매)은 쇼핑몰에서 결제하면 자동으로 쌓입니다. 별도 "매출 신청"은 없습니다. <a href="mall.html" style="color:var(--pri)">쇼핑몰로 가기 →</a></p>`],
+    }],
+    ['수당', {
+      bonus: ['수당 내역', () => kpis([['이번 달 합계', won(myBonus())], ['지급 완료', won(DB.bonuses.filter(b => b.st === '지급완료').reduce((s, b) => s + b.amt, 0))], ['정산 예정', won(DB.bonuses.filter(b => b.st === '정산예정').reduce((s, b) => s + b.amt, 0))]])
+        + card('수당 목록', periodBar('<select><option>전체 수당</option><option>추천 수당</option><option>직급 수당</option><option>팀 수당</option></select>')
+          + table([['날짜', r => r.date], ['종류', r => r.type], ['발생 회원', r => r.from], ['금액', r => won(r.amt), 'r'], ['상태', r => badge(r.st)]], DB.bonuses))
+        + `<div class="notice-box">수당 종류와 비율은 시안용 예시입니다. 실제 수당 규정(방문판매법 기준 등록 내용)을 받은 뒤 확정합니다.</div>`],
+      daily: ['일자별 수당', () => card('2026-11 일자별 합계', `<div class="bar"><select style="max-width:200px"><option>2026-11</option><option>2026-10</option><option>2026-09</option></select><button>조회</button></div>`
+        + table([['날짜', r => r[0]], ['추천 수당', r => won(r[1]), 'r'], ['직급 수당', r => won(r[2]), 'r'], ['팀 수당', r => won(r[3]), 'r'], ['합계', r => `<b>${won(r[1] + r[2] + r[3])}</b>`, 'r']],
+          [['2026-11-26', 61000, 0, 23000], ['2026-11-24', 85000, 42000, 0], ['2026-11-17', 40000, 0, 12000]]))],
+    }],
+    ['출금', {
+      withdraw: ['출금 신청', () => card('출금 신청', `
+        <div class="grid"><div class="card kpi"><div class="l">출금 가능 금액</div><div class="v">${won(468000)}</div></div><div class="card kpi"><div class="l">받는 계좌</div><div class="v" style="font-size:16px">국민은행 ***-7890</div></div></div>
+        <div class="form2"><div class="field"><label>신청 금액 (1만 원 단위, 최소 5만 원)</label><input id="wamt" type="number" step="10000" placeholder="예: 100000" oninput="calcW()"></div>
+        <div class="field"><label>수수료 (3.3%) / 실지급액</label><input id="wres" disabled value="0원 / 0원"></div></div>
+        <button onclick="applyW()">출금 신청</button> <a class="btn ghost" href="#bank">계좌 변경</a>`)],
+      wlist: ['출금 내역', () => card('출금 내역', periodBar() + table([['번호', r => r.no], ['신청일', r => r.date], ['신청액', r => won(r.amt), 'r'], ['수수료', r => won(r.fee), 'r'], ['실지급', r => won(r.amt - r.fee), 'r'], ['계좌', r => r.bank], ['상태', r => badge(r.st)]], DB.withdrawals))],
+    }],
+    ['조직', {
+      tree: ['추천 계보도', () => card(`내 조직 (${ME.id} 기준)`, `<div class="bar"><input placeholder="회원 아이디 찾기"><button class="ghost">찾기</button></div><div class="tree">${renderTree(ME.id)}</div>`)],
+      team: ['마이팀 정보', () => card('하위 회원 목록', table([['아이디', r => r.id], ['이름', r => r.name], ['직급', r => r.grade], ['추천인', r => r.sponsor], ['가입일', r => r.joined], ['PV', r => r.pv.toLocaleString(), 'r'], ['상태', r => badge(r.status)]], DB.members.slice(1)))],
+    }],
+    ['내 정보', {
+      profile: ['개인정보 보기', () => card('개인정보', table([['항목', r => r[0]], ['내용', r => r[1]]],
+        [['아이디', ME.id], ['이름', ME.name], ['직급', ME.grade], ['휴대폰', '010-****-5678'], ['이메일', 'sample@example.com'], ['가입일', ME.joined], ['추천인', 'root'], ['소속', '본사']]))],
+      edit: ['개인정보 수정', () => card('개인정보 수정', `<div class="form2">
+        <div class="field"><label>이름</label><input value="${ME.name}"></div><div class="field"><label>휴대폰</label><input value="010-1234-5678"></div>
+        <div class="field"><label>이메일</label><input value="sample@example.com"></div><div class="field"><label>주소</label><input value="서울시 ○○구"></div></div>
+        <button onclick="toast('저장했습니다 (시안)')">저장</button>`)],
+      password: ['비밀번호 변경', () => card('비밀번호 변경', `<div class="field"><label>현재 비밀번호</label><input type="password"></div>
+        <div class="form2"><div class="field"><label>새 비밀번호 (영문+숫자 8자 이상)</label><input type="password"></div><div class="field"><label>새 비밀번호 확인</label><input type="password"></div></div>
+        <button onclick="toast('변경했습니다 (시안)')">변경</button>`)],
+      bank: ['금융정보 수정', () => card('출금 계좌', `<div class="form2">
+        <div class="field"><label>은행</label><select><option>국민은행</option><option>신한은행</option><option>우리은행</option><option>농협</option></select></div>
+        <div class="field"><label>계좌번호</label><input value="123-456-7890"></div><div class="field"><label>예금주</label><input value="${ME.name}"></div></div>
+        <div class="notice-box">예금주가 회원 이름과 같아야 합니다. 주민등록번호는 받지 않습니다(법적 근거 확인 전까지 수집 안 함).</div>
+        <button onclick="toast('계좌 확인 후 저장했습니다 (시안)')">계좌 확인 및 저장</button>`)],
+    }],
+    ['소통', {
+      notice: ['공지사항', () => card('공지', DB.notices.filter(n => n.to !== '판매자').map(n => `<details style="border-bottom:1px solid var(--line);padding:10px 0"><summary><b>${esc(n.t)}</b> <span class="help">${n.d}</span></summary><p>${esc(n.body)}</p></details>`).join(''))],
+      qna: ['1:1 문의', () => card('문의하기', `<div class="field"><label>제목</label><input id="qt"></div><div class="field"><label>내용</label><textarea id="qb" rows="4"></textarea></div><button onclick="addQ()">등록</button>`)
+        + card('내 문의', table([['제목', r => esc(r.t)], ['날짜', r => r.d], ['상태', r => badge(r.st)], ['답변', r => esc(r.a) || '-']], DB.inquiries.filter(q => q.who === ME.id && q.to === '관리자')))],
+    }],
+  ],
+});
+
+function calcW(){ const v = +document.getElementById('wamt').value || 0; const f = Math.round(v * 0.033); document.getElementById('wres').value = `${won(f)} / ${won(v - f)}`; }
+function applyW(){
+  const v = +document.getElementById('wamt').value || 0;
+  if (v < 50000 || v % 10000) return toast('5만 원 이상, 1만 원 단위로 입력하세요');
+  if (v > 468000) return toast('출금 가능 금액을 넘었습니다');
+  DB.withdrawals.unshift({no:'W-' + String(DB.withdrawals.length + 30).padStart(4, '0'), who:ME.id, amt:v, fee:Math.round(v * 0.033), bank:'국민 ***-7890', date:today(), st:'대기'});
+  save(); toast('출금 신청했습니다. 관리자 화면 [출금 승인]에서 확인할 수 있습니다'); location.hash = 'wlist';
+}
+function addQ(){
+  const t = document.getElementById('qt').value.trim(); if (!t) return toast('제목을 입력하세요');
+  DB.inquiries.unshift({t, who:ME.id, to:'관리자', d:today(), st:'답변대기', a:''}); save(); toast('문의를 등록했습니다'); rerender();
+}
+</script>
+</body>
+</html>

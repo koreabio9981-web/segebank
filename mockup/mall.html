@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소개뱅크 몰 시안</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+  body{background:#fff}
+  .hd{background:var(--pri);color:#fff}
+  .hd-in,.nav-in,.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+  .hd-in{display:flex;align-items:center;gap:20px;padding-top:18px;padding-bottom:18px;flex-wrap:wrap}
+  .brand{font-size:22px;font-weight:800;white-space:nowrap}.brand span{color:#ffd66b}
+  .search{flex:1;min-width:200px;display:flex}.search input{border:0;border-radius:8px 0 0 8px;padding:11px 14px}.search button{border-radius:0 8px 8px 0;background:var(--acc);white-space:nowrap;padding:0 18px}
+  .util{display:flex;gap:14px;font-size:13px;white-space:nowrap}
+  .nav{border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+  .nav-in{display:flex;gap:4px;overflow-x:auto}
+  .nav a{padding:13px 14px;white-space:nowrap;color:var(--sub)}.nav a.on{color:var(--pri);font-weight:700;box-shadow:inset 0 -2px var(--pri)}
+  .wrap{padding-top:24px;padding-bottom:60px;min-height:60vh}
+  .banner{border-radius:14px;padding:36px 32px;background:linear-gradient(120deg,#2457d6,#6b8cff);color:#fff;margin-bottom:28px}
+  .banner h2{font-size:26px;margin-bottom:6px}
+  .sec-t{display:flex;justify-content:space-between;align-items:end;margin:6px 0 14px}.sec-t h2{font-size:20px}
+  .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:22px 16px}
+  .pc .nm{margin-top:10px;font-size:14px;min-height:40px}
+  .pc .pr{margin-top:4px}.pc .pr s{color:#aaa;font-size:12px;margin-right:4px}.pc .pr b{font-size:16px}.pc .pr em{color:var(--acc);font-style:normal;font-weight:700;margin-left:4px}
+  .pc .sl{font-size:12px;color:var(--sub)}
+  .detail{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+  .detail .thumb{font-size:80px}
+  .qty{display:flex;align-items:center;gap:6px}.qty input{width:70px;text-align:center}
+  .ft{background:#2b2f38;color:#aab0bd;font-size:12px;padding:30px 0}
+  .ft .wrap{min-height:0;padding:0 16px}
+  @media (max-width:800px){.detail{grid-template-columns:1fr}.banner{padding:24px 20px}.plist{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header class="hd"><div class="hd-in">
+  <a class="brand" href="#">소개뱅크 <span>몰</span></a>
+  <form class="search" onsubmit="event.preventDefault();location.hash='search/'+encodeURIComponent(this.q.value)"><input name="q" placeholder="상품을 검색하세요"><button>검색</button></form>
+  <div class="util"><a href="#mypage">마이페이지</a><a href="#cart">장바구니 <b id="cartN">0</b></a><a href="office.html">오피스</a><a href="seller.html">판매자 입점</a></div>
+</div></header>
+<nav class="nav"><div class="nav-in" id="nav"></div></nav>
+<main class="wrap" id="view"></main>
+<footer class="ft"><div class="wrap">소개뱅크 몰 (시안) · 상호/대표자/사업자등록번호/통신판매업 신고번호/주소/고객센터는 실제 정보로 바뀝니다.<br>입점 판매자 상품의 경우 판매자 정보는 각 상품 페이지에 표시됩니다(전자상거래법).<br><a href="index.html" style="color:#fff">← 시안 전체 화면 목록</a> · <a href="#" onclick="resetDemo()" style="color:#fff">데모 초기화</a></div></footer>
+<script src="assets/common.js"></script>
+<script>
+if (!DB.cart) DB.cart = [];
+if (!DB.wish) DB.wish = [205];
+const BUYER = 'kim01';
+const visible = () => DB.products.filter(p => ['판매중', '품절'].includes(p.status) && sellerBy(p.seller)?.status === '승인');
+const disc = p => p.list > p.price ? Math.round((1 - p.price / p.list) * 100) : 0;
+const pcard = p => `<a class="pc" href="#p/${p.no}">${thumb(p)}<div class="nm">${esc(p.name)}</div><div class="pr">${disc(p) ? `<s>${won(p.list)}</s>` : ''}<b>${won(p.price)}</b>${disc(p) ? `<em>${disc(p)}%</em>` : ''}</div><div class="sl">${esc(sellerBy(p.seller).company)}${p.status === '품절' ? ' · <span style="color:var(--bad)">품절</span>' : ''}</div></a>`;
+const grid = ps => ps.length ? `<div class="plist">${ps.map(pcard).join('')}</div>` : '<div class="empty">상품이 없습니다</div>';
+const cartTotal = () => DB.cart.reduce((s, [no, q]) => s + productBy(no).price * q, 0);
+const shipFee = () => DB.cart.length ? (cartTotal() >= 50000 ? 0 : 3000) : 0;
+
+const R = {
+  '': () => `<div class="banner"><h2>소개로 함께 크는 쇼핑</h2><p>회원 구매는 PV(실적 점수)로 쌓이고, 검증된 판매자가 직접 판매합니다.</p></div>
+    <div class="sec-t"><h2>추천 상품</h2><a href="#cat/전체" class="help">전체 보기 →</a></div>${grid(visible().slice(0, 8))}`,
+  cat: c => `<div class="sec-t"><h2>${esc(c)}</h2><select style="width:auto"><option>추천순</option><option>낮은 가격순</option><option>높은 가격순</option><option>신상품순</option></select></div>${grid(visible().filter(p => c === '전체' || p.cat === c))}`,
+  search: q => `<div class="sec-t"><h2>'${esc(q)}' 검색 결과</h2></div>${grid(visible().filter(p => p.name.includes(q)))}`,
+  p: no => { const p = productBy(+no); if (!p) return '<div class="empty">없는 상품입니다</div>'; const s = sellerBy(p.seller);
+    return `<div class="detail"><div>${thumb(p)}</div><div>
+      <div class="help">${p.cat} · 판매자 ${esc(s.company)}</div><h1 style="font-size:24px;margin:6px 0 14px">${esc(p.name)}</h1>
+      <div class="pr" style="font-size:15px">${disc(p) ? `<s style="color:#aaa">${won(p.list)}</s> <em style="color:var(--acc);font-style:normal;font-weight:700">${disc(p)}%</em><br>` : ''}<b style="font-size:26px">${won(p.price)}</b></div>
+      <table style="margin:18px 0"><tr><th>PV</th><td>${p.pv} PV (회원 구매 시 적립)</td></tr><tr><th>배송비</th><td>3,000원 (5만 원 이상 무료)</td></tr><tr><th>재고</th><td>${p.stock ? p.stock + '개' : '<span style="color:var(--bad)">품절</span>'}</td></tr></table>
+      <div class="qty" style="margin-bottom:14px">수량 <input id="q" type="number" min="1" value="1"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" ${p.stock ? '' : 'disabled'} onclick="addCart(${p.no})">장바구니</button><button ${p.stock ? '' : 'disabled'} onclick="addCart(${p.no},true)">바로 구매</button><button class="ghost" onclick="wish(${p.no})">${DB.wish.includes(p.no) ? '♥ 찜 해제' : '♡ 찜'}</button></div>
+    </div></div>
+    ${card('상품 상세', '<p class="help">판매자가 등록한 상세 설명과 이미지가 여기에 표시됩니다.</p>')}
+    ${card('판매자 정보 (전자상거래법 표시 사항)', table([['항목', r => r[0]], ['내용', r => esc(r[1])]], [['상호', s.company], ['대표자', s.ceo], ['사업자번호', s.bizNo], ['연락처', s.phone], ['이메일', s.email]]))}
+    ${card('상품 문의', `<button class="ghost" onclick="askSeller(${p.no})">판매자에게 문의하기</button>`)}`; },
+  cart: () => `<div class="sec-t"><h2>장바구니</h2></div>` + (DB.cart.length ? card('', table([['', r => thumb(productBy(r[0]), 'sm')], ['상품', r => esc(productBy(r[0]).name)], ['판매자', r => esc(sellerBy(productBy(r[0]).seller).company)], ['가격', r => won(productBy(r[0]).price), 'r'],
+      ['수량', (r, i) => `<input type="number" min="1" value="${r[1]}" style="width:70px" onchange="DB.cart[${i}][1]=Math.max(1,+this.value);save();render()">`], ['합계', r => won(productBy(r[0]).price * r[1]), 'r'], ['', (r, i) => `<button class="sm bad" onclick="DB.cart.splice(${i},1);save();render()">삭제</button>`]], DB.cart))
+      + card('', `<div style="text-align:right">상품 ${won(cartTotal())} + 배송비 ${won(shipFee())} = <b style="font-size:20px">${won(cartTotal() + shipFee())}</b><br><br><a class="btn" href="#checkout">주문하기</a></div>`) : '<div class="empty">장바구니가 비어 있습니다</div>'),
+  checkout: () => !DB.cart.length ? '<div class="empty">주문할 상품이 없습니다</div>' : `<div class="sec-t"><h2>주문 · 결제</h2></div>
+    ${card('배송지', `<div class="form2"><div class="field"><label>받는 분</label><input value="김민수"></div><div class="field"><label>연락처</label><input value="010-1234-5678"></div></div><div class="field"><label>주소</label><input value="서울시 ○○구 ○○로 12"></div><div class="field"><label>배송 메모</label><input placeholder="문 앞에 놓아 주세요"></div>`)}
+    ${card('결제 수단', `<div class="bar"><label><input type="radio" name="pay" checked style="width:auto"> 신용카드</label><label><input type="radio" name="pay" style="width:auto"> 계좌이체</label><label><input type="radio" name="pay" style="width:auto"> 무통장입금</label><label><input type="radio" name="pay" style="width:auto"> 적립금 사용</label></div><p class="help">실제 결제는 결제대행사(PG) 연동 후 동작합니다.</p>`)}
+    ${card('결제 금액', `<div style="text-align:right">상품 ${won(cartTotal())} + 배송비 ${won(shipFee())}<br><b style="font-size:22px">${won(cartTotal() + shipFee())}</b> · 적립 예정 PV ${DB.cart.reduce((s, [no, q]) => s + productBy(no).pv * q, 0)}<br><br><button onclick="order()">결제하기 (시안)</button></div>`)}`,
+  done: no => `<div class="card" style="text-align:center;padding:40px"><h2>주문이 완료되었습니다</h2><p>주문번호 <b>${esc(no)}</b></p><p class="help">판매자센터 [주문·배송 관리]와 오피스 [매출 내역]에 이 주문이 보입니다.</p><a class="btn" href="#mypage">주문 내역 보기</a> <a class="btn ghost" href="#">쇼핑 계속하기</a></div>`,
+  mypage: tab => { tab = tab || 'orders'; const tabs = {orders:'주문 내역', wish:'찜한 상품', address:'배송지 관리', qna:'내 문의'};
+    return `<div class="sec-t"><h2>마이페이지</h2><a class="help" href="office.html">회원 오피스로 →</a></div><div class="bar">${Object.entries(tabs).map(([k, t]) => `<a class="btn ${k === tab ? '' : 'ghost'} sm" href="#mypage/${k}">${t}</a>`).join('')}</div>`
+      + (tab === 'orders' ? card('', table([['주문번호', r => r.no], ['주문일', r => r.date], ['상품', r => esc(orderTitle(r))], ['금액', r => won(orderTotal(r)), 'r'], ['상태', r => badge(r.st)], ['송장', r => r.track || '-'], ['', r => r.st === '배송완료' ? `<button class="sm" onclick="confirmO('${r.no}')">구매 확정</button>` : '']], DB.orders.filter(o => o.buyer === BUYER)))
+      : tab === 'wish' ? grid(DB.wish.map(productBy).filter(Boolean))
+      : tab === 'address' ? card('', table([['이름', r => r[0]], ['주소', r => r[1]], ['기본', r => r[2]]], [['집', '서울시 ○○구 ○○로 12', '기본'], ['회사', '서울시 강남구 ○○대로 34', '']]) + '<br><button class="ghost">+ 배송지 추가</button>')
+      : card('', table([['제목', r => esc(r.t)], ['받는 곳', r => r.to === '관리자' ? '고객센터' : sellerName(r.to)], ['날짜', r => r.d], ['상태', r => badge(r.st)], ['답변', r => esc(r.a) || '-']], DB.inquiries.filter(q => q.who === BUYER)))); },
+  cs: () => `<div class="sec-t"><h2>고객센터</h2></div>` + card('공지사항', DB.notices.filter(n => n.to !== '판매자').map(n => `<details style="border-bottom:1px solid var(--line);padding:10px 0"><summary><b>${esc(n.t)}</b> <span class="help">${n.d}</span></summary><p>${esc(n.body)}</p></details>`).join(''))
+    + card('자주 묻는 질문', ['배송은 얼마나 걸리나요? — 판매자마다 다르며 보통 2~3일입니다.', 'PV는 언제 쌓이나요? — 구매 확정 시 쌓입니다.', '판매자로 입점하고 싶어요. — 상단 [판매자 입점]에서 신청하세요.'].map(t => `<p>${t}</p>`).join('')),
+};
+const sellerName = id => esc(sellerBy(id)?.company || id);
+
+function render(){
+  const [r, ...rest] = location.hash.slice(1).split('/'); const arg = decodeURIComponent(rest.join('/'));
+  document.getElementById('nav').innerHTML = [['', '홈'], ['cat/전체', '전체']].concat(DB.categories.map(c => ['cat/' + c, c])).concat([['cs', '고객센터']])
+    .map(([h, t]) => `<a href="#${h}" class="${location.hash.slice(1) === h || (h === '' && !location.hash.slice(1)) ? 'on' : ''}">${t}</a>`).join('');
+  document.getElementById('view').innerHTML = (R[r] || R[''])(arg);
+  document.getElementById('cartN').textContent = DB.cart.length;
+  window.scrollTo(0, 0);
+}
+window.rerender = render;
+function addCart(no, now){ const q = Math.max(1, +document.getElementById('q').value || 1); const c = DB.cart.find(c => c[0] === no); c ? c[1] += q : DB.cart.push([no, q]); save(); if (now) location.hash = 'checkout'; else { toast('장바구니에 담았습니다'); render(); } }
+function wish(no){ const i = DB.wish.indexOf(no); i < 0 ? DB.wish.push(no) : DB.wish.splice(i, 1); save(); render(); }
+function order(){
+  const no = 'O-' + today().replace(/-/g, '').slice(2) + String(DB.orders.length + 1).padStart(2, '0');
+  DB.orders.unshift({no, buyer:BUYER, items:DB.cart.map(c => [...c]), date:today(), st:'결제완료', track:''});
+  DB.cart.forEach(([n, q]) => { const p = productBy(n); p.stock = Math.max(0, p.stock - q); if (!p.stock) p.status = '품절'; });
+  DB.cart = []; save(); location.hash = 'done/' + no;
+}
+function confirmO(no){ DB.orders.find(o => o.no === no).st = '구매확정'; save(); toast('구매 확정했습니다. PV가 적립됩니다'); render(); }
+function askSeller(no){ const p = productBy(no); modal('판매자에게 문의', [{name:'t', label:'문의 내용'}], v => { if (!v.t) return false; DB.inquiries.unshift({t:v.t, who:BUYER, to:p.seller, d:today(), st:'답변대기', a:''}); save(); toast('문의를 남겼습니다'); }); }
+window.addEventListener('hashchange', render); render();
+</script>
+</body>
+</html>

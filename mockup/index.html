@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소개뱅크 시안 목록</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+  .wrap{max-width:1100px;margin:0 auto;padding:32px 16px 60px}
+  .hero h1{font-size:28px}.hero p{color:var(--sub);margin:8px 0 24px}
+  .areas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:28px}
+  .area{background:#fff;border:1px solid var(--line);border-radius:12px;padding:20px;display:flex;flex-direction:column}
+  .area .ic{font-size:28px}.area h2{font-size:18px;margin:8px 0 4px}.area p{color:var(--sub);font-size:13px;margin:0 0 12px;flex:1}
+  .area ul{margin:0 0 14px;padding-left:18px;font-size:13px;color:var(--sub)}
+  .flow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .flow a{background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+  .flow span{color:var(--sub)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero"><span class="mock">시안 · 샘플 데이터</span><h1 style="margin-top:10px">소개뱅크 전체 화면 시안</h1>
+    <p>쇼핑몰 · 회원 오피스 · 판매자센터 · 관리자, 4개 영역으로 나뉩니다. 서버 없이 브라우저에서 바로 동작하며, 화면끼리 데이터가 이어집니다(이 브라우저에만 저장).</p></div>
+
+  <div class="areas">
+    <div class="area"><div class="ic">🛍️</div><h2>소개뱅크 몰</h2><p>고객·회원이 상품을 사는 쇼핑몰</p>
+      <ul><li>홈 · 카테고리 · 검색</li><li>상품 상세(판매자 정보 표시)</li><li>장바구니 · 주문/결제 · 완료</li><li>마이페이지(주문, 찜, 배송지, 문의)</li><li>고객센터</li></ul><a class="btn" href="mall.html">열기</a></div>
+    <div class="area"><div class="ic">👤</div><h2>회원 오피스</h2><p>회원이 실적·수당·조직을 확인</p>
+      <ul><li>오피스 홈(추천 코드)</li><li>매출 내역 · 수당 내역 · 일자별 수당</li><li>출금 신청 · 출금 내역</li><li>추천 계보도(가로) · 마이팀</li><li>개인정보 · 비밀번호 · 금융정보 · 공지 · 문의</li></ul><a class="btn" href="office.html">열기</a></div>
+    <div class="area"><div class="ic">🏪</div><h2>판매자센터</h2><p>입점 판매자가 웹에서 직접 상품·주문을 관리</p>
+      <ul><li>입점 신청 → 심사 중 → 승인/반려</li><li>상품 개별 등록 · <b>일괄 등록(CSV)</b></li><li>상품 목록(재고, 숨김)</li><li>주문·배송(송장) · 정산 내역</li><li>상품 문의 · 판매자 정보</li></ul><a class="btn" href="seller.html">열기</a></div>
+    <div class="area"><div class="ic">🛠️</div><h2>관리자</h2><p>운영자가 전체를 관리</p>
+      <ul><li><b>판매자 입점 승인/반려</b> · 판매자 목록(정지)</li><li>판매자 정산</li><li>전체 상품(판매 중지) · 카테고리 · 주문</li><li>회원 · 계보도 · 수당 정산 · 출금 승인</li><li>공지 · 문의 · 운영 설정(수수료, 승인 방식)</li></ul><a class="btn" href="admin.html">열기</a></div>
+  </div>
+
+  <div class="card"><h3>직접 해 보기 ① 판매자 입점 → 관리자 승인 → 상품 등록</h3>
+    <div class="flow"><a href="seller.html">1. 판매자센터 왼쪽 위 "데모: 신규 사용자" 선택 → 입점 신청</a><span>→</span>
+      <a href="admin.html#sellerApprove">2. 관리자 → 판매자 입점 승인 → 승인</a><span>→</span>
+      <a href="seller.html#bulk">3. 판매자센터 새로 고침 → 상품 일괄 등록</a><span>→</span>
+      <a href="mall.html">4. 몰에 상품 노출 확인</a></div></div>
+  <div class="card"><h3>직접 해 보기 ② 상품 일괄 등록</h3>
+    <p class="help" style="margin:0 0 10px">판매자센터 → 상품 일괄 등록 → "예시 파일로 해 보기"를 누르면 오류가 섞인 7줄이 검사됩니다. 정상 줄만 등록되고, 오류 줄은 파일로 내려받아 고칠 수 있습니다.</p>
+    <a class="btn ghost" href="seller.html#bulk">일괄 등록 화면 열기</a></div>
+  <div class="card"><h3>직접 해 보기 ③ 주문 흐름</h3>
+    <div class="flow"><a href="mall.html">1. 몰에서 상품 구매</a><span>→</span><a href="seller.html#orders">2. 판매자: 발주 확인 → 송장 입력</a><span>→</span><a href="mall.html#mypage">3. 구매자: 구매 확정</a><span>→</span><a href="office.html#sales">4. 오피스 매출 반영</a></div></div>
+  <p class="help">설계 문서: <code>docs/SEGEBANK_DESIGN.md</code> · <button class="ghost sm" onclick="resetDemo()">데모 데이터 초기화</button></p>
+</div>
+<script src="assets/common.js"></script>
+</body>
+</html>
