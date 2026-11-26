@@ -47,11 +47,29 @@
   .b{display:inline-block;padding:2px 8px;border-radius:20px;font-size:12px}
   .b.ok{background:#e4f5ec;color:var(--ok)}.b.warn{background:#fdf2dc;color:var(--warn)}.b.bad{background:#fbe5e5;color:var(--bad)}.b.n{background:var(--pri2);color:var(--pri)}
   .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.bar input,.bar select{width:auto;flex:1;min-width:140px}
-  .tree ul{list-style:none;padding-left:22px;border-left:1px dashed var(--line);margin:4px 0}
-  .tree>ul{padding-left:0;border:0}
-  .tree li{margin:6px 0}
-  .node{display:inline-block;background:var(--pri2);border-radius:6px;padding:6px 10px}
-  .node small{color:var(--sub);margin-left:6px}
+  /* 조직도: 위에서 아래로, 같은 단계는 가로로 나열 */
+  .tree{overflow-x:auto;padding:4px 0 8px}
+  .tree ul{display:flex;justify-content:center;margin:0;padding:20px 0 0;position:relative}
+  .tree>ul{padding-top:0;width:max-content;min-width:100%}
+  .tree li{list-style:none;position:relative;padding:20px 6px 0;text-align:center}
+  .tree>ul>li{padding-top:0}
+  .tree li::before,.tree li::after{content:"";position:absolute;top:0;right:50%;width:50%;height:20px;border-top:1px solid #b9c4da}
+  .tree li::after{right:auto;left:50%;border-left:1px solid #b9c4da}
+  .tree li:only-child::before,.tree li:only-child::after{display:none}
+  .tree li:only-child{padding-top:20px}
+  .tree>ul>li:only-child{padding-top:0}
+  .tree li:first-child::before,.tree li:last-child::after{border:0}
+  .tree li:last-child::before{border-right:1px solid #b9c4da;border-radius:0 6px 0 0}
+  .tree li:first-child::after{border-radius:6px 0 0 0}
+  .tree ul ul::before{content:"";position:absolute;top:0;left:50%;height:20px;border-left:1px solid #b9c4da}
+  .tree li:only-child>.node{position:relative}
+  .tree ul li:only-child>.node::before{content:"";position:absolute;top:-20px;left:50%;height:20px;border-left:1px solid #b9c4da}
+  .tree>ul>li:only-child>.node::before{display:none}
+  .node{display:inline-block;background:var(--card);border:1px solid #c9d5f0;border-top:3px solid var(--pri);border-radius:8px;padding:8px 12px;min-width:96px;white-space:nowrap}
+  .node b{display:block;font-size:13px}
+  .node small{display:block;color:var(--sub);font-size:11px;margin-top:2px}
+  .node.g-골드{border-top-color:#d4a017}.node.g-실버{border-top-color:#8a96a8}
+  .node.stop{opacity:.55}
   .chart{display:flex;align-items:flex-end;gap:10px;height:160px;padding-top:10px}
   .chart div{flex:1;background:var(--pri);border-radius:4px 4px 0 0;position:relative;min-width:16px}
   .chart div span{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:11px;color:var(--sub)}
@@ -111,6 +129,9 @@ const D = {
     {id:'choi3',name:'최유진',grade:'실버',sponsor:'lee22',status:'정지',joined:'2026-08-03',sales:1100000},
     {id:'jung5',name:'정하늘',grade:'일반',sponsor:'lee22',status:'정상',joined:'2026-10-15',sales:330000},
     {id:'han9',name:'한도윤',grade:'일반',sponsor:'park7',status:'정상',joined:'2026-11-01',sales:150000},
+    {id:'yoon4',name:'윤지아',grade:'실버',sponsor:'kim01',status:'정상',joined:'2026-06-08',sales:1420000},
+    {id:'seo8',name:'서예준',grade:'일반',sponsor:'yoon4',status:'정상',joined:'2026-09-12',sales:280000},
+    {id:'kang2',name:'강민재',grade:'일반',sponsor:'yoon4',status:'정상',joined:'2026-10-27',sales:330000},
   ],
   products:[
     {code:'P-100',name:'기본 패키지',price:330000,pv:300,active:true},
@@ -157,10 +178,11 @@ const card = (h, body) => `<div class="card"><h3>${h}</h3>${body}</div>`;
 const toast = msg => { const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none',1800); };
 
 /* 조직도 */
+const nodeHtml = k => `<span class="node g-${k.grade}${k.status==='정지'?' stop':''}"><b>${k.name}</b><small>${k.id} · ${k.grade}${k.status==='정지'?' · 정지':''}</small></span>`;
 function tree(root){
   const kids = D.members.filter(m=>m.sponsor===root);
   if(!kids.length) return '';
-  return `<ul>${kids.map(k=>`<li><span class="node">${k.name} (${k.id})<small>${k.grade}</small></span>${tree(k.id)}</li>`).join('')}</ul>`;
+  return `<ul>${kids.map(k=>`<li>${nodeHtml(k)}${tree(k.id)}</li>`).join('')}</ul>`;
 }
 
 /* ===== 회원 화면 ===== */
@@ -179,7 +201,7 @@ const MEMBER = {
     + card('비밀번호 변경',`<div class="form2"><div class="field"><label>현재 비밀번호</label><input type="password"></div><div></div>
       <div class="field"><label>새 비밀번호</label><input type="password"></div><div class="field"><label>새 비밀번호 확인</label><input type="password"></div></div>
       <button onclick="toast('변경했습니다 (시안)')">변경</button>`)],
-  tree:['조직도',()=> card('내 조직 (kim01 기준)',`<div class="tree"><ul><li><span class="node">김민수 (kim01)<small>골드 · 나</small></span>${tree('kim01')}</li></ul></div>`)],
+  tree:['조직도',()=> card('내 조직 (kim01 기준)',`<div class="tree"><ul><li><span class="node g-골드"><b>김민수 (나)</b><small>kim01 · 골드</small></span>${tree('kim01')}</li></ul></div>`)],
   bonus:['수당 내역',()=> card('조회',`<div class="bar"><input type="month" value="2026-11"><select><option>전체 종류</option><option>추천 수당</option><option>직급 수당</option><option>매칭 수당</option></select><button>조회</button></div>`
     + table([['기간',r=>r.period],['종류',r=>r.type],['금액',r=>won(r.amt),'r'],['상태',r=>badge(r.st)]], D.bonuses)
     + `<p style="text-align:right;font-weight:700">합계 ${won(D.bonuses.reduce((s,b)=>s+b.amt,0))}</p>`)],
@@ -201,7 +223,7 @@ const ADMIN = {
   members:['회원 관리',()=> card('회원 목록',`<div class="bar"><input placeholder="아이디 또는 이름 검색"><select><option>전체 등급</option><option>골드</option><option>실버</option><option>일반</option></select><button>검색</button><button class="ghost">엑셀 내려받기</button></div>`
     + table([['아이디',r=>r.id],['이름',r=>r.name],['등급',r=>r.grade],['추천인',r=>r.sponsor],['누적 매출',r=>won(r.sales),'r'],['가입일',r=>r.joined],['상태',r=>badge(r.status)],
       ['관리',r=>`<button class="sm ghost" onclick="toast('${r.name} 상세 (시안)')">상세</button> <button class="sm ghost" onclick="toast('${r.status==='정상'?'정지':'해제'} 처리 (시안)')">${r.status==='정상'?'정지':'해제'}</button>`]], D.members))],
-  tree:['조직도 조회',()=> card('기준 회원 선택',`<div class="bar"><select id="troot" onchange="treeOut.innerHTML=renderTree(this.value)">${D.members.map(m=>`<option value="${m.id}">${m.name} (${m.id})</option>`).join('')}</select></div><div class="tree" id="treeOut">${renderTree('kim01')}</div>`)],
+  tree:['조직도 조회',()=> card('기준 회원 선택',`<div class="bar"><select id="troot" onchange="treeOut.innerHTML=renderTree(this.value);centerTrees()">${D.members.map(m=>`<option value="${m.id}">${m.name} (${m.id})</option>`).join('')}</select></div><div class="tree" id="treeOut">${renderTree('kim01')}</div>`)],
   orders:['주문 관리',()=> card('주문 목록',`<div class="bar"><input type="date" value="2026-11-01"><input type="date" value="2026-11-26"><select><option>전체 상태</option><option>결제완료</option><option>배송중</option><option>배송완료</option></select><button>조회</button></div>`
     + table([['주문번호',r=>r.no],['회원',r=>r.who],['상품',r=>r.item],['금액',r=>won(r.amt),'r'],['주문일',r=>r.date],['상태',r=>badge(r.st)],
       ['변경',r=>`<select style="width:auto" onchange="toast('상태 변경 (시안)')"><option>${r.st}</option><option>결제완료</option><option>배송중</option><option>배송완료</option><option>취소</option></select>`]], D.orders))],
@@ -216,7 +238,7 @@ const ADMIN = {
     + card('공지 목록', table([['제목',r=>r.t],['날짜',r=>r.d],['관리',()=>`<button class="sm ghost">수정</button> <button class="sm ghost">삭제</button>`]], D.notices))],
   qna:['문의 관리',()=> card('문의 목록', table([['제목',r=>r.t],['회원',r=>r.who],['날짜',r=>r.d],['상태',r=>badge(r.st)],['답변',r=>r.a||`<button class="sm" onclick="toast('답변 창 (시안)')">답변하기</button>`]], D.inquiries))],
 };
-function renderTree(id){ const m=D.members.find(x=>x.id===id); return `<ul><li><span class="node">${m.name} (${m.id})<small>${m.grade}</small></span>${tree(id)}</li></ul>`; }
+function renderTree(id){ const m=D.members.find(x=>x.id===id); return `<ul><li>${nodeHtml(m)}${tree(id)}</li></ul>`; }
 
 /* ===== 화면 전환 ===== */
 let role='member';
@@ -238,7 +260,10 @@ function render(){
   side.classList.remove('open');
   document.getElementById('title').textContent = map[key][0];
   document.getElementById('view').innerHTML = map[key][1]();
+  centerTrees();
 }
+/* 조직도가 화면보다 넓으면 맨 위(본인)가 가운데 오도록 가로 스크롤 */
+function centerTrees(){ document.querySelectorAll('.tree').forEach(t=>t.scrollLeft=(t.scrollWidth-t.clientWidth)/2); }
 window.addEventListener('hashchange',render); render();
 </script>
 </body>
