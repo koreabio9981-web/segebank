@@ -1,0 +1,92 @@
+<title>소개뱅크 시안 보기</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@500;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: 한 줄 소개 → 시뮬레이터 바로가기 → 시안 5개 영역 카드(2열) → 직접 해 보기 흐름 3개 */
+:root{
+  --bg:#f3f5fa; --panel:#ffffff; --ink:#18213a; --sub:#5b6580; --line:#dbe2ef; --accent:#2457d6; --accent-ink:#ffffff; --soft:#e7edfb;
+  --f-display:"IBM Plex Sans KR","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1424; --panel:#171e33; --ink:#e6eaf5; --sub:#9aa4c0; --line:#2a3452; --accent:#7ea2ff; --accent-ink:#0f1424; --soft:#1f2a48; color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1424; --panel:#171e33; --ink:#e6eaf5; --sub:#9aa4c0; --line:#2a3452; --accent:#7ea2ff; --accent-ink:#0f1424; --soft:#1f2a48; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--f-display);font-size:28px;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-size:18px;margin:0}
+p{margin:0}
+.lead{color:var(--sub);max-width:62ch;margin-top:6px}
+a{color:var(--accent)}
+.sim{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.sim p{color:var(--sub);font-size:14px;max-width:60ch}
+.btn{display:inline-block;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:700;padding:10px 18px;border-radius:8px;white-space:nowrap}
+.btn:focus-visible,.area a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.areas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:720px){.areas{grid-template-columns:minmax(0,1fr)}}
+.area{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.area .who{font-size:12px;color:var(--sub);letter-spacing:.04em}
+.area ul{margin:0;padding-left:18px;color:var(--sub);font-size:14px}
+.area .go{margin-top:auto;padding-top:6px;font-weight:700;text-decoration:none}
+.area.wide{grid-column:1/-1}
+.flows{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.flow{display:flex;flex-direction:column;gap:6px}
+.flow ol{margin:0;padding-left:20px;font-size:14px}
+.note{font-size:13px;color:var(--sub)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>소개뱅크 시안 보기</h1>
+    <p class="lead">쇼핑몰, 회원 오피스, 판매자센터, 관리자, 회원 개인몰 화면 시안입니다. 모든 데이터는 예시이며, 화면끼리 이어져서 실제 흐름처럼 눌러 볼 수 있습니다.</p>
+  </header>
+
+  <section class="sim" aria-label="보상플랜 시뮬레이터">
+    <div>
+      <h2>보상플랜 시뮬레이터</h2>
+      <p>직추천 10% · 바이너리 매칭 5% · 롤업 1~10대 · 직급 보너스 3%의 지급률이 법정 한도 35% 안에 드는지 12개월로 계산합니다. [확정안 v0.3] 버튼으로 승인안을 바로 볼 수 있습니다.</p>
+    </div>
+    <a class="btn" href="https://claude.ai/artifact/So16FfWXiS8QKPDqmqS864" target="_blank" rel="noopener">시뮬레이터 열기</a>
+  </section>
+
+  <section class="areas" aria-label="시안 영역">
+    <div class="area">
+      <span class="who">고객 · 회원</span><h2>소개뱅크 몰</h2>
+      <ul><li>홈 · 카테고리 · 검색</li><li>상품 상세(판매자 정보 표시)</li><li>장바구니 · 주문 · 마이페이지</li></ul>
+      <a class="go" href="mall.html">몰 열기 →</a>
+    </div>
+    <div class="area">
+      <span class="who">판매원</span><h2>회원 오피스</h2>
+      <ul><li>추천 코드 · 매출 · 수당 · 일자별 수당</li><li>출금 신청 · 추천 계보도(가로)</li><li>개인정보 · 금융정보 · 공지 · 문의</li></ul>
+      <a class="go" href="office.html">오피스 열기 →</a>
+    </div>
+    <div class="area">
+      <span class="who">입점 판매자</span><h2>판매자센터</h2>
+      <ul><li>입점 신청 → 심사 → 승인/반려</li><li>상품 개별 등록 · CSV 일괄 등록</li><li>주문·송장 · 정산 · 상품 문의</li></ul>
+      <a class="go" href="seller.html">판매자센터 열기 →</a>
+    </div>
+    <div class="area">
+      <span class="who">운영자</span><h2>관리자</h2>
+      <ul><li>판매자 입점 승인 · 판매 정지</li><li>상품 · 주문 · 회원 · 수당 정산 · 출금 승인</li><li>운영 설정(수수료, 승인 방식)</li></ul>
+      <a class="go" href="admin.html">관리자 열기 →</a>
+    </div>
+    <div class="area wide">
+      <span class="who">판매원 · 휴대폰 화면</span><h2>회원 개인몰 (분양 A)</h2>
+      <ul><li>개설 4단계: 주소(kim01.sogaebank.com) → 소개 → 디자인 → 진열</li><li>공유(링크·QR·카카오톡) · 손님 화면 · 관리 · 실적(회원/비회원 구분)</li></ul>
+      <a class="go" href="myshop.html">개인몰 시안 열기 →</a>
+    </div>
+  </section>
+
+  <section class="flows" aria-label="직접 해 보기">
+    <h2>직접 해 보기</h2>
+    <div class="flow"><b>판매자 입점부터 판매까지</b>
+      <ol><li><a href="seller.html">판매자센터</a> 왼쪽 위에서 "데모: 신규 사용자"를 고르고 입점 신청</li><li><a href="admin.html#sellerApprove">관리자 › 판매자 입점 승인</a>에서 승인</li><li>판매자센터로 돌아가 상품 일괄 등록 → "예시 파일로 해 보기"(정상 3줄, 오류 4줄)</li><li><a href="mall.html">몰</a>에서 등록한 상품 확인</li></ol></div>
+    <div class="flow"><b>주문과 배송</b>
+      <ol><li><a href="mall.html">몰</a>에서 상품 구매</li><li><a href="seller.html#orders">판매자센터 › 주문</a>에서 발주 확인 → 송장 입력</li><li><a href="mall.html#mypage">마이페이지</a>에서 구매 확정</li></ol></div>
+    <div class="flow"><b>개인몰 만들기</b>
+      <ol><li><a href="myshop.html">개인몰 시안</a>에서 주소에 "admin"을 넣어 금칙어 검사 확인</li><li>소개글에 "수익 보장"을 넣어 차단 확인 → 고쳐서 개설</li></ol></div>
+    <p class="note">입력한 내용은 지금 보는 브라우저에만 저장됩니다. 처음 상태로 되돌리려면 각 화면의 [데모 초기화]를 누르세요.</p>
+  </section>
+</div>
