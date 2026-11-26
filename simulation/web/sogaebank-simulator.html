@@ -1,0 +1,398 @@
+<title>소개뱅크 보상플랜 시뮬레이터</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 왼쪽 입력 패널(접이식 묶음) + 오른쪽 결과(요약 → 차트 → 표). 휴대폰에서는 입력이 위, 결과가 아래 */
+:root{
+  --bg:#f4f6fb; --panel:#ffffff; --ink:#18213a; --sub:#5d6782; --line:#dde3ef; --soft:#eef2fb;
+  --accent:#2457d6; --accent-soft:#e3ebff; --input:#1f4fd1;
+  --ok:#17804f; --ok-bg:#dff3e8; --warn:#9a6300; --warn-bg:#fdf0d4; --bad:#b42c2c; --bad-bg:#fbe1e1;
+  --bar1:#c9d6f5; --bar2:#2457d6; --grid:#e6eaf3;
+  --f-display:"IBM Plex Sans KR","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1424; --panel:#171e33; --ink:#e6eaf5; --sub:#9aa4c0; --line:#2a3452; --soft:#1d2640;
+  --accent:#7ea2ff; --accent-soft:#22305a; --input:#9fbaff;
+  --ok:#5fd39a; --ok-bg:#163527; --warn:#f2c464; --warn-bg:#3a2e12; --bad:#ff8a8a; --bad-bg:#3d1b1f;
+  --bar1:#33416b; --bar2:#7ea2ff; --grid:#253050; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1424; --panel:#171e33; --ink:#e6eaf5; --sub:#9aa4c0; --line:#2a3452; --soft:#1d2640;
+  --accent:#7ea2ff; --accent-soft:#22305a; --input:#9fbaff;
+  --ok:#5fd39a; --ok-bg:#163527; --warn:#f2c464; --warn-bg:#3a2e12; --bad:#ff8a8a; --bad-bg:#3d1b1f;
+  --bar1:#33416b; --bar2:#7ea2ff; --grid:#253050; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-family:var(--f-display);font-size:24px;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-size:16px;margin:0}
+.sub{color:var(--sub);font-size:13px;margin:4px 0 0}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs a{padding:7px 14px;border-radius:999px;border:1px solid var(--line);color:var(--sub);text-decoration:none;font-weight:500;background:var(--panel)}
+.tabs a[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-theme="dark"] .tabs a[aria-current="page"]{color:#0f1424}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tabs a[aria-current="page"]{color:#0f1424}}
+.grid{display:grid;grid-template-columns:340px minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}.results{order:-1}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.inputs{padding:6px 0}
+.inputs details{border-bottom:1px solid var(--line)}
+.inputs details:last-of-type{border-bottom:0}
+.inputs summary{cursor:pointer;padding:12px 16px;font-weight:700;font-family:var(--f-display);list-style:none;display:flex;justify-content:space-between}
+.inputs summary::after{content:"＋";color:var(--sub)}
+.inputs details[open] summary::after{content:"－"}
+.inputs .rows{padding:0 16px 12px;display:flex;flex-direction:column;gap:8px}
+.field{display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:8px;align-items:center}
+.field label{font-size:13px;color:var(--ink)}
+.field label small{display:block;color:var(--sub);font-size:11px}
+.field input{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--input);font-family:var(--f-num);font-size:13px;text-align:right}
+.field input:focus,.btn:focus-visible,.tabs a:focus-visible,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+.field.key input{background:var(--accent-soft)}
+.presets{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.btn{font:inherit;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.results{display:flex;flex-direction:column;gap:18px;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px 16px}
+.kpi .l{font-size:12px;color:var(--sub)}
+.kpi .v{font-size:22px;font-weight:600;margin-top:4px;font-family:var(--f-num)}
+.kpi .s{font-size:12px;color:var(--sub);margin-top:2px}
+.chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.bad{background:var(--bad-bg);color:var(--bad)}
+.card{padding:16px}
+.card-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.note{font-size:12px;color:var(--sub)}
+.callout{padding:12px 14px;border-radius:10px;font-size:13px;background:var(--warn-bg);color:var(--ink);border:1px solid var(--line)}
+.callout b{color:var(--warn)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{color:var(--sub);font-weight:500;font-size:11.5px;background:var(--soft);position:sticky;top:0}
+td:first-child,th:first-child{text-align:left}
+tbody td{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+tfoot td{font-weight:700;font-family:var(--f-num);border-top:2px solid var(--line)}
+td.ok{color:var(--ok)} td.warn{color:var(--warn)} td.bad{color:var(--bad)} td.neg{color:var(--bad)}
+.heat td{text-align:center}
+.heat td.ok{background:var(--ok-bg)} .heat td.warn{background:var(--warn-bg)} .heat td.bad{background:var(--bad-bg)}
+.heat td.cur{outline:2px solid var(--accent);outline-offset:-2px}
+svg text{fill:var(--sub);font-size:11px;font-family:var(--f-num)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--sub);flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:1100px){.two{grid-template-columns:minmax(0,1fr)}}
+.pform{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px}
+@media (max-width:600px){.pform{grid-template-columns:minmax(0,1fr)}}
+select{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--soft);color:var(--input);font:inherit;font-size:13px}
+.view{display:flex;flex-direction:column;gap:18px}
+footer{color:var(--sub);font-size:12px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>소개뱅크 보상플랜 시뮬레이터</h1>
+      <p class="sub">직추천 · 바이너리 매칭 · 롤업 · 직급 보너스의 후원수당 지급률이 법정 한도 35%(공급가 기준) 안에 드는지 12개월로 확인합니다. 값을 바꾸면 바로 다시 계산됩니다.</p>
+    </div>
+    <nav class="tabs" aria-label="보기">
+      <a href="#sim">12개월 시뮬레이션</a>
+      <a href="#personal">개인 수당</a>
+      <a href="#sens">민감도</a>
+      <a href="#ranks">직급표</a>
+    </nav>
+  </header>
+
+  <div class="grid">
+    <aside class="panel inputs" aria-label="가정 입력값">
+      <div class="presets">
+        <button class="btn" id="p-excel" type="button">엑셀 기본값</button>
+        <button class="btn" id="p-real" type="button">현실 계수 3.0</button>
+        <button class="btn" id="p-rec" type="button">권장안(매칭 5%)</button>
+      </div>
+      <div id="inputs"></div>
+    </aside>
+
+    <main class="results">
+      <section class="view" id="v-sim"></section>
+      <section class="view" id="v-personal" hidden></section>
+      <section class="view" id="v-sens" hidden></section>
+      <section class="view" id="v-ranks" hidden></section>
+      <footer>모든 금액은 원, 부가세 제외 공급가 기준입니다. 예시 가정이며 법률 자문이 아닙니다. 법정 한도·요건은 등록 전 관할 시·도, 공제조합, 변호사 확인이 필요합니다. 입력값은 이 브라우저에만 저장됩니다.</footer>
+    </main>
+  </div>
+</div>
+
+<script>
+/* ===== 입력 정의 (엑셀 [입력] 시트와 같은 값) ===== */
+const GROUPS = [
+  ['법정 · 보상플랜', [
+    ['limit','법정 후원수당 한도','%',0.35,'공급가 매출 대비'],
+    ['alarm','내부 경보선(비례삭감 기준)','%',0.33,'넘으면 전체 수당 같은 비율로 삭감'],
+    ['pvRatio','PV 비율(공급가 대비)','%',0.70,''],
+    ['direct','직추천 수당률','%',0.10,'직추천 하위 PV × 비율'],
+    ['match','바이너리 매칭률','%',0.10,'소실적 PV × 비율',true],
+    ['coef','매칭 실효계수','x',1.00,'PV 1원이 몇 명에게 매칭되는지',true],
+    ['roll','롤업 대별 수당률','%',0.01,''],
+    ['rollMax','롤업 최대 대수','대',10,''],
+    ['rollAvg','롤업 평균 지급 대수','대',6,'실제 평균(최대 이하)'],
+    ['pool','직급 보너스 풀 비율','%',0.03,'전체 PV × 비율'],
+    ['sponsor','스폰서 보유 비율','%',0.98,'직추천 수당이 나가는 PV 비중'],
+    ['tax','원천징수율','%',0.033,'사업소득 3.3%'],
+    ['cap','개인 월 매칭 상한','원',5000000,'개인 수당 계산에 적용'],
+    ['minPV','수당 자격 최소 본인 PV','PV',100000,'월 본인 구매'],
+  ]],
+  ['조직 · 매출', [
+    ['init','초기 판매원 수','명',100,''],
+    ['recruit','월 신규 모집률(1개월차)','%',0.30,'기초 판매원 대비'],
+    ['decay','모집률 월 감쇠','%',0.08,''],
+    ['churn','월 이탈률','%',0.03,''],
+    ['active','활동률','%',0.60,'기말 판매원 중 구매자',true],
+    ['buy','활동 판매원 월평균 구매액','원',300000,'공급가',true],
+    ['consumer','소비자 직접 매출 비율','%',0.25,'판매원 매출 대비'],
+    ['returns','반품률','%',0.05,'반품분 수당 회수'],
+  ]],
+  ['회사 손익', [
+    ['cogs','매출원가율','%',0.35,'순매출 대비',true],
+    ['opex','변동 운영비율','%',0.15,'물류·결제·공제 등'],
+    ['fixed','월 고정비','원',50000000,'인건비·임차료·시스템',true],
+  ]],
+];
+const DEFAULTS = {}; GROUPS.forEach(([,fs]) => fs.forEach(f => DEFAULTS[f[0]] = f[3]));
+const RANKS_DEFAULT = [
+  ['판매원',0,3,0],['실버',1000000,5,0],['골드',5000000,7,1],['플래티넘',20000000,9,2],['다이아몬드',50000000,10,4]];
+const PERSONAL_DEFAULT = {grade:'골드', month:6, self:150000, directPV:1200000, left:8000000, right:5500000, shares:200,
+  gens:[900000,1500000,2400000,3000000,3200000,2800000,2000000,1200000,600000,200000]};
+
+const KEY = 'sogaebank-sim-v1';
+let S = load();
+function load(){
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  return {
+    v: Object.assign({}, DEFAULTS, saved && saved.v),
+    ranks: (saved && saved.ranks) || RANKS_DEFAULT.map(r => r.slice()),
+    p: Object.assign({}, PERSONAL_DEFAULT, saved && saved.p),
+  };
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+/* ===== 계산 (엑셀 [월간시뮬레이션]·[개인수당계산]과 같은 식) ===== */
+function simulate(v){
+  const rows = []; let B = v.init;
+  for (let m = 1; m <= 12; m++){
+    const C = Math.round(B * v.recruit * Math.pow(1 - v.decay, m - 1));
+    const D = Math.round(B * v.churn);
+    const E = B + C - D, F = Math.round(E * v.active);
+    const G = F * v.buy, H = G * v.consumer, I = G + H, J = I * v.returns, K = I - J, L = K * v.pvRatio;
+    const M = L * v.direct * v.sponsor, N = L * v.match * v.coef, O = L * v.roll * Math.min(v.rollAvg, v.rollMax), P = L * v.pool;
+    const Q = M + N + O + P, R = K === 0 ? 0 : Q / K, Sx = R > v.alarm ? v.alarm / R : 1, T = Q * Sx, U = K === 0 ? 0 : T / K;
+    const X = T * v.tax, Z = K * v.cogs, AA = K * v.opex + v.fixed, AB = K - Z - T - AA;
+    rows.push({m, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S: Sx, T, U, X, Y: T - X, Z, AA, AB, AC: K === 0 ? 0 : AB / K});
+    B = E;
+  }
+  const sum = k => rows.reduce((s, r) => s + r[k], 0);
+  const tot = {}; 'C D G H I J K L M N O P Q T X Y Z AA AB'.split(' ').forEach(k => tot[k] = sum(k));
+  tot.R = tot.K ? tot.Q / tot.K : 0; tot.U = tot.K ? tot.T / tot.K : 0; tot.AC = tot.K ? tot.AB / tot.K : 0;
+  tot.ok = rows.every(r => r.U <= v.limit);
+  return {rows, tot};
+}
+function personal(v, p, ranks, sim){
+  const rk = ranks.find(r => r[0] === p.grade) || ranks[0];
+  const open = rk[2], share = rk[3];
+  const qualified = p.self >= v.minPV;
+  const weak = Math.min(p.left, p.right);
+  const gens = p.gens.map((pv, i) => { const g = i + 1, isOpen = g <= open && g <= v.rollMax; return {g, pv, isOpen, pay: isOpen ? pv * v.roll : 0}; });
+  const rollTot = gens.reduce((s, x) => s + x.pay, 0);
+  const row = sim.rows[Math.min(Math.max(1, p.month), 12) - 1];
+  const d = qualified ? p.directPV * v.direct : 0;
+  const mt = qualified ? Math.min(weak * v.match, v.cap) : 0;
+  const ro = qualified ? rollTot : 0;
+  const bo = qualified && p.shares > 0 ? row.P * share / p.shares : 0;
+  const before = d + mt + ro + bo, scale = row.S, fin = before * scale;
+  const tax = Math.round(fin * v.tax / 10) * 10;
+  return {qualified, open, share, weak, gens, d, mt, ro, bo, before, scale, fin, tax, net: fin - tax, carryL: p.left - weak, carryR: p.right - weak};
+}
+const rateAt = (v, match, coef, rollAvg) => v.pvRatio * (v.direct * v.sponsor + match * coef + v.roll * Math.min(rollAvg, v.rollMax) + v.pool);
+
+/* ===== 표시 도우미 ===== */
+const won = n => Math.round(n).toLocaleString('ko-KR');
+const man = n => { const a = Math.abs(n); const s = n < 0 ? '−' : ''; return a >= 1e8 ? s + (a / 1e8).toFixed(2) + '억' : s + Math.round(a / 1e4).toLocaleString('ko-KR') + '만'; };
+const pct = n => (n * 100).toFixed(1) + '%';
+const level = (r, v) => r > v.limit ? 'bad' : r > v.alarm ? 'warn' : 'ok';
+const LABEL = {ok:'적합', warn:'경보선 초과 · 삭감', bad:'법정 한도 초과'};
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ===== 입력 패널 ===== */
+function fmtInput(unit, val){ return unit === '%' ? +(val * 100).toFixed(2) : val; }
+function renderInputs(){
+  const wide = window.innerWidth > 900;
+  document.getElementById('inputs').innerHTML = GROUPS.map(([g, fs], gi) => `<details ${wide && gi < 2 ? 'open' : ''}><summary>${g}</summary><div class="rows">${
+    fs.map(([k, label, unit, , help, key]) => `<div class="field ${key ? 'key' : ''}"><label for="in-${k}">${label}${help ? `<small>${help}</small>` : ''}</label>
+      <input id="in-${k}" data-k="${k}" data-unit="${unit}" inputmode="decimal" value="${fmtInput(unit, S.v[k])}" aria-label="${label} (${unit})"></div>`).join('')}</div></details>`).join('');
+  document.querySelectorAll('#inputs input').forEach(el => el.addEventListener('input', () => {
+    const raw = parseFloat(el.value.replace(/,/g, ''));
+    if (!isFinite(raw)) return;
+    S.v[el.dataset.k] = el.dataset.unit === '%' ? raw / 100 : raw;
+    save(); renderAll();
+  }));
+}
+function setValues(obj){ Object.assign(S.v, obj); save(); renderInputs(); renderAll(); }
+document.getElementById('p-excel').onclick = () => setValues(Object.assign({}, DEFAULTS));
+document.getElementById('p-real').onclick = () => setValues({coef: 3});
+document.getElementById('p-rec').onclick = () => setValues({coef: 3, match: 0.05});
+
+/* ===== 차트 (SVG) ===== */
+function barChart(rows, v){
+  const W = 760, H = 240, pl = 64, pr = 12, pt = 12, pb = 28, iw = W - pl - pr, ih = H - pt - pb;
+  const max = Math.max(...rows.map(r => r.K)) * 1.1 || 1;
+  const step = niceStep(max / 4); const top = Math.ceil(max / step) * step;
+  const y = x => pt + ih - x / top * ih, bw = iw / rows.length;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="월별 순매출과 최종 수당">`;
+  for (let t = 0; t <= top + 1; t += step){ s += `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid)"/><text x="${pl - 6}" y="${y(t) + 4}" text-anchor="end">${man(t)}</text>`; }
+  rows.forEach((r, i) => {
+    const x = pl + i * bw + bw * 0.14, w = bw * 0.34;
+    s += `<rect x="${x}" y="${y(r.K)}" width="${w}" height="${y(0) - y(r.K)}" fill="var(--bar1)" rx="2"><title>${r.m}월 순매출 ${won(r.K)}원</title></rect>`;
+    s += `<rect x="${x + w + 2}" y="${y(r.T)}" width="${w}" height="${y(0) - y(r.T)}" fill="var(--bar2)" rx="2"><title>${r.m}월 최종 수당 ${won(r.T)}원</title></rect>`;
+    s += `<text x="${pl + i * bw + bw / 2}" y="${H - 8}" text-anchor="middle">${r.m}월</text>`;
+  });
+  return s + '</svg>';
+}
+function rateChart(rows, v){
+  const W = 760, H = 200, pl = 48, pr = 12, pt = 12, pb = 28, iw = W - pl - pr, ih = H - pt - pb;
+  const top = Math.max(0.4, Math.ceil(Math.max(...rows.map(r => r.R)) * 10 + 0.5) / 10);
+  const y = x => pt + ih - x / top * ih, x = i => pl + iw * (i + 0.5) / rows.length;
+  let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="월별 지급률">`;
+  for (let t = 0; t <= top + 1e-9; t += 0.1){ s += `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid)"/><text x="${pl - 6}" y="${y(t) + 4}" text-anchor="end">${Math.round(t * 100)}%</text>`; }
+  s += `<line x1="${pl}" x2="${W - pr}" y1="${y(v.limit)}" y2="${y(v.limit)}" stroke="var(--bad)" stroke-dasharray="5 4"/><text x="${W - pr}" y="${y(v.limit) - 4}" text-anchor="end" style="fill:var(--bad)">한도 ${pct(v.limit)}</text>`;
+  s += `<line x1="${pl}" x2="${W - pr}" y1="${y(v.alarm)}" y2="${y(v.alarm)}" stroke="var(--warn)" stroke-dasharray="2 4"/><text x="${W - pr}" y="${y(v.alarm) + 14}" text-anchor="end" style="fill:var(--warn)">경보선 ${pct(v.alarm)}</text>`;
+  const pts = (k) => rows.map((r, i) => `${x(i)},${y(r[k])}`).join(' ');
+  s += `<polyline points="${pts('R')}" fill="none" stroke="var(--sub)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+  s += `<polyline points="${pts('U')}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
+  rows.forEach((r, i) => { s += `<circle cx="${x(i)}" cy="${y(r.U)}" r="3.5" fill="var(--accent)"><title>${r.m}월 최종 ${pct(r.U)} (삭감 전 ${pct(r.R)})</title></circle><text x="${x(i)}" y="${H - 8}" text-anchor="middle">${r.m}월</text>`; });
+  return s + '</svg>';
+}
+function niceStep(x){ const p = Math.pow(10, Math.floor(Math.log10(x || 1))); const n = x / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+
+/* ===== 화면 ===== */
+function renderSim(v, sim){
+  const t = sim.tot, last = sim.rows[11], lv = level(Math.max(...sim.rows.map(r => r.U)), v);
+  const be = (() => { const c = 1 - v.cogs - v.opex - t.U; if (c <= 0) return null; const k = v.fixed / c; return {k, n: k / ((1 - v.returns) * v.buy * (1 + v.consumer))}; })();
+  const cut = sim.rows.filter(r => r.S < 1).length;
+  document.getElementById('v-sim').innerHTML = `
+    <div class="kpis">
+      <div class="panel kpi"><div class="l">연간 최종 지급률</div><div class="v">${pct(t.U)}</div><div class="s"><span class="chip ${lv}">${t.ok ? (cut ? '적합 · ' + cut + '개월 삭감' : '전 기간 적합') : '한도 초과 월 있음'}</span></div></div>
+      <div class="panel kpi"><div class="l">연간 순매출</div><div class="v">${man(t.K)}</div><div class="s">12월 활동 판매원 ${won(last.F)}명</div></div>
+      <div class="panel kpi"><div class="l">연간 후원수당(최종)</div><div class="v">${man(t.T)}</div><div class="s">삭감 전 ${pct(t.R)}</div></div>
+      <div class="panel kpi"><div class="l">연간 영업이익</div><div class="v" style="color:${t.AB < 0 ? 'var(--bad)' : 'var(--ok)'}">${man(t.AB)}</div><div class="s">이익률 ${pct(t.AC)}</div></div>
+    </div>
+    ${v.coef < 2 && v.match >= 0.07 ? `<div class="callout"><b>매칭 실효계수 ${v.coef.toFixed(1)}은 낮게 잡은 값일 수 있습니다.</b> 조직 시뮬레이션에서 판매원 5,000명 현실형 조직의 계수는 약 3.0, 5만 명은 약 4.0이었습니다. [현실 계수 3.0] 버튼으로 비교해 보세요.</div>` : ''}
+    <div class="panel card"><div class="card-head"><h2>월별 순매출과 최종 수당</h2><div class="legend"><span><i style="background:var(--bar1)"></i>순매출</span><span><i style="background:var(--bar2)"></i>최종 수당</span></div></div>${barChart(sim.rows, v)}</div>
+    <div class="panel card"><div class="card-head"><h2>월별 지급률</h2><div class="legend"><span><i style="background:var(--accent)"></i>최종(삭감 후)</span><span><i style="background:var(--sub)"></i>삭감 전</span></div></div>${rateChart(sim.rows, v)}</div>
+    <div class="panel card"><div class="card-head"><h2>12개월 상세</h2><span class="note">단위: 원 · 수당은 순매출(반품 차감 후) 기준</span></div>
+      <div class="tbl"><table><thead><tr><th>월</th><th>기말 판매원</th><th>활동</th><th>순매출</th><th>PV</th><th>직추천</th><th>매칭</th><th>롤업</th><th>직급 보너스</th><th>삭감 전</th><th>삭감계수</th><th>최종 수당</th><th>최종 지급률</th><th>판정</th><th>영업이익</th></tr></thead>
+      <tbody>${sim.rows.map(r => `<tr><td>${r.m}월</td><td>${won(r.E)}</td><td>${won(r.F)}</td><td>${won(r.K)}</td><td>${won(r.L)}</td><td>${won(r.M)}</td><td>${won(r.N)}</td><td>${won(r.O)}</td><td>${won(r.P)}</td><td>${pct(r.R)}</td><td>${r.S.toFixed(3)}</td><td>${won(r.T)}</td><td class="${level(r.U, v)}">${pct(r.U)}</td><td class="${level(r.U, v)}">${r.U <= v.limit ? '적합' : '초과'}</td><td class="${r.AB < 0 ? 'neg' : ''}">${won(r.AB)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>합계</td><td>${won(last.E)}</td><td></td><td>${won(t.K)}</td><td>${won(t.L)}</td><td>${won(t.M)}</td><td>${won(t.N)}</td><td>${won(t.O)}</td><td>${won(t.P)}</td><td>${pct(t.R)}</td><td></td><td>${won(t.T)}</td><td>${pct(t.U)}</td><td>${t.ok ? '전 기간 적합' : '초과 있음'}</td><td class="${t.AB < 0 ? 'neg' : ''}">${won(t.AB)}</td></tr></tfoot></table></div></div>
+    <div class="panel card"><div class="card-head"><h2>손익분기</h2></div>
+      ${be ? `<p style="margin:0">고정비 월 <b class="num">${won(v.fixed)}</b>원을 메우려면 월 순매출 <b class="num">${won(be.k)}</b>원, 활동 판매원 약 <b class="num">${won(be.n)}</b>명이 필요합니다. 12월 활동 판매원은 <b class="num">${won(last.F)}</b>명입니다.</p>`
+          : `<p style="margin:0;color:var(--bad)">원가율 + 운영비율 + 지급률이 100%를 넘어 매출이 늘어도 흑자가 되지 않습니다.</p>`}
+      <p class="note" style="margin:6px 0 0">공헌이익률 = 1 − 매출원가율 − 변동 운영비율 − 연간 지급률</p></div>`;
+}
+
+function renderPersonal(v, sim){
+  const p = S.p, r = personal(v, p, S.ranks, sim);
+  const opt = S.ranks.map(x => `<option ${x[0] === p.grade ? 'selected' : ''}>${esc(x[0])}</option>`).join('');
+  document.getElementById('v-personal').innerHTML = `
+    <div class="panel card"><div class="card-head"><h2>판매원 1명의 월 수당</h2><span class="note">예시 값이 들어 있습니다. 실제 실적으로 바꿔 보세요.</span></div>
+      <div class="pform">
+        <div class="field"><label for="pp-grade">직급</label><select id="pp-grade" data-p="grade">${opt}</select></div>
+        <div class="field"><label for="pp-month">적용 월<small>삭감계수·보너스 풀 참조</small></label><input id="pp-month" data-p="month" value="${p.month}"></div>
+        <div class="field"><label for="pp-self">본인 월 구매 PV</label><input id="pp-self" data-p="self" value="${p.self}"></div>
+        <div class="field"><label for="pp-direct">직추천 하위 PV 합계</label><input id="pp-direct" data-p="directPV" value="${p.directPV}"></div>
+        <div class="field"><label for="pp-left">좌 실적 PV<small>이월 포함</small></label><input id="pp-left" data-p="left" value="${p.left}"></div>
+        <div class="field"><label for="pp-right">우 실적 PV<small>이월 포함</small></label><input id="pp-right" data-p="right" value="${p.right}"></div>
+        <div class="field"><label for="pp-shares">직급 보너스 지분 총합(전사)</label><input id="pp-shares" data-p="shares" value="${p.shares}"></div>
+      </div></div>
+    <div class="two">
+      <div class="panel card"><div class="card-head"><h2>계산 결과</h2><span class="chip ${r.qualified ? 'ok' : 'bad'}">수당 자격 ${r.qualified ? '충족' : '미충족'}</span></div>
+        <div class="tbl"><table><tbody>
+          <tr><td>롤업 개방 대수 · 보너스 지분</td><td>${r.open}대 · ${r.share}</td></tr>
+          <tr><td>소실적 PV</td><td>${won(r.weak)}</td></tr>
+          <tr><td>직추천 수당</td><td>${won(r.d)}</td></tr>
+          <tr><td>매칭 수당 (월 상한 ${man(v.cap)})</td><td>${won(r.mt)}</td></tr>
+          <tr><td>롤업 수당</td><td>${won(r.ro)}</td></tr>
+          <tr><td>직급 보너스</td><td>${won(r.bo)}</td></tr>
+          <tr><td>수당 합계(삭감 전)</td><td>${won(r.before)}</td></tr>
+          <tr><td>적용 삭감계수 (${p.month}월)</td><td>${r.scale.toFixed(3)}</td></tr>
+          <tr><td><b>최종 수당</b></td><td><b>${won(r.fin)}</b></td></tr>
+          <tr><td>원천징수(${pct(v.tax)}, 10원 단위)</td><td>−${won(r.tax)}</td></tr>
+          <tr><td><b>실수령액</b></td><td><b>${won(r.net)}</b></td></tr>
+          <tr><td>다음 달 이월 (좌 / 우)</td><td>${won(r.carryL)} / ${won(r.carryR)}</td></tr>
+        </tbody></table></div></div>
+      <div class="panel card"><div class="card-head"><h2>롤업: 대별 하위 PV</h2><span class="note">${r.open}대까지 개방</span></div>
+        <div class="tbl"><table><thead><tr><th>대</th><th>하위 PV</th><th>개방</th><th>롤업 수당</th></tr></thead><tbody>
+          ${r.gens.map((g, i) => `<tr><td>${g.g}대</td><td><input class="gen" data-i="${i}" aria-label="${g.g}대 하위 PV" value="${g.pv}" style="width:110px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--soft);color:var(--input);font-family:var(--f-num);text-align:right"></td><td>${g.isOpen ? '개방' : '—'}</td><td>${won(g.pay)}</td></tr>`).join('')}
+        </tbody><tfoot><tr><td>합계</td><td>${won(r.gens.reduce((s, g) => s + g.pv, 0))}</td><td></td><td>${won(r.gens.reduce((s, g) => s + g.pay, 0))}</td></tr></tfoot></table></div>
+        <p class="note">매칭은 소실적 기준으로 지급하고 양쪽에서 소실적만큼 뺀 뒤 나머지를 다음 달로 이월합니다. 소멸(플러시) 규정은 지급기준서에 따릅니다.</p></div>
+    </div>`;
+  document.querySelectorAll('#v-personal [data-p]').forEach(el => el.addEventListener('change', () => {
+    const k = el.dataset.p; S.p[k] = k === 'grade' ? el.value : (parseFloat(el.value.replace(/,/g, '')) || 0); save(); renderAll();
+  }));
+  document.querySelectorAll('#v-personal .gen').forEach(el => el.addEventListener('change', () => {
+    S.p.gens[+el.dataset.i] = parseFloat(el.value.replace(/,/g, '')) || 0; save(); renderAll();
+  }));
+}
+
+function renderSens(v){
+  const coefs = [1, 2, 3, 4, 5, 6, 7], rates = [0.03, 0.05, 0.07, 0.08, 0.10];
+  const coefs2 = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3], rolls = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const cell = (r, cur) => `<td class="${level(r, v)} ${cur ? 'cur' : ''}">${pct(r)}</td>`;
+  document.getElementById('v-sens').innerHTML = `
+    <div class="panel card"><div class="card-head"><h2>매칭률 × 실효계수 → 지급률(삭감 전)</h2><span class="note">다른 값은 왼쪽 입력 그대로 · 테두리 = 현재 입력</span></div>
+      <div class="tbl"><table class="heat"><thead><tr><th>매칭률 ＼ 계수</th>${coefs.map(c => `<th>${c.toFixed(1)}x</th>`).join('')}</tr></thead>
+      <tbody>${rates.map(rt => `<tr><td>${pct(rt)}</td>${coefs.map(c => cell(rateAt(v, rt, c, v.rollAvg), Math.abs(rt - v.match) < 1e-9 && Math.abs(c - v.coef) < 1e-9)).join('')}</tr>`).join('')}</tbody></table></div>
+      <div class="legend" style="margin-top:8px"><span><i style="background:var(--ok-bg)"></i>경보선 이하</span><span><i style="background:var(--warn-bg)"></i>경보선 초과(삭감)</span><span><i style="background:var(--bad-bg)"></i>법정 한도 초과</span></div></div>
+    <div class="panel card"><div class="card-head"><h2>매칭 실효계수 × 롤업 평균 지급 대수 (엑셀 [민감도분석])</h2><span class="note">현재 매칭률 ${pct(v.match)}</span></div>
+      <div class="tbl"><table class="heat"><thead><tr><th>계수 ＼ 롤업대수</th>${rolls.map(r => `<th>${r}</th>`).join('')}</tr></thead>
+      <tbody>${coefs2.map(c => `<tr><td>${c}x</td>${rolls.map(r => cell(rateAt(v, v.match, c, r), Math.abs(c - v.coef) < 1e-9 && r === v.rollAvg)).join('')}</tr>`).join('')}</tbody></table></div>
+      <p class="note">이론상 최대(최대 대수 전부 지급, 현재 계수): <b class="num">${pct(rateAt(v, v.match, v.coef, v.rollMax))}</b> · 한도까지 여유: <b class="num">${pct(v.limit - rateAt(v, v.match, v.coef, v.rollAvg))}</b></p></div>
+    <div class="panel card"><div class="card-head"><h2>바이너리 실효계수 참고값</h2><span class="note">조직 시뮬레이션, 활동률 60%, 이월·상한 적용 전</span></div>
+      <div class="tbl"><table><thead><tr><th>판매원 수</th><th>완전 균형(최악)</th><th>현실형(무작위 후원 + 스필오버)</th></tr></thead>
+      <tbody><tr><td>600명</td><td>2.97x</td><td>1.81x</td></tr><tr><td>5,000명</td><td>4.53x</td><td>2.96x</td></tr><tr><td>50,000명</td><td>6.20x</td><td>3.95x</td></tr></tbody></table></div>
+      <p class="note">조직이 커지고 깊어질수록 같은 PV가 더 많은 상위자의 소실적에 반복 반영되어 계수가 커집니다.</p></div>`;
+}
+
+function renderRanks(){
+  document.getElementById('v-ranks').innerHTML = `
+    <div class="panel card"><div class="card-head"><h2>직급표</h2><button class="btn" id="rk-reset" type="button">기본값으로</button></div>
+      <div class="tbl"><table><thead><tr><th>직급</th><th>누적 소실적 PV 요건</th><th>롤업 개방 대수</th><th>보너스 지분</th></tr></thead><tbody>
+      ${S.ranks.map((r, i) => `<tr><td>${esc(r[0])}</td>${[1, 2, 3].map(j => `<td><input class="rk" data-i="${i}" data-j="${j}" aria-label="${esc(r[0])} ${['', 'PV 요건', '롤업 개방 대수', '보너스 지분'][j]}" value="${r[j]}" style="width:130px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--soft);color:var(--input);font-family:var(--f-num);text-align:right"></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div>
+      <p class="note">롤업 개방 대수는 입력의 롤업 최대 대수(${S.v.rollMax}대)를 넘지 않게 정하세요. 바꾼 값은 [개인 수당] 계산에 바로 반영됩니다.</p></div>`;
+  document.querySelectorAll('.rk').forEach(el => el.addEventListener('change', () => {
+    S.ranks[+el.dataset.i][+el.dataset.j] = parseFloat(el.value.replace(/,/g, '')) || 0; save(); renderAll();
+  }));
+  document.getElementById('rk-reset').onclick = () => { S.ranks = RANKS_DEFAULT.map(r => r.slice()); save(); renderAll(); };
+}
+
+const VIEWS = ['sim', 'personal', 'sens', 'ranks'];
+function currentView(){ const h = location.hash.slice(1); return VIEWS.includes(h) ? h : 'sim'; }
+function renderAll(){
+  const v = S.v, sim = simulate(v), cur = currentView();
+  VIEWS.forEach(id => { document.getElementById('v-' + id).hidden = id !== cur; });
+  document.querySelectorAll('.tabs a').forEach(a => a.setAttribute('aria-current', a.getAttribute('href') === '#' + cur ? 'page' : 'false'));
+  if (cur === 'sim') renderSim(v, sim);
+  if (cur === 'personal') renderPersonal(v, sim);
+  if (cur === 'sens') renderSens(v);
+  if (cur === 'ranks') renderRanks();
+  window.__sim = {simulate, personal, S};
+}
+window.addEventListener('hashchange', renderAll);
+renderInputs(); renderAll();
+</script>
