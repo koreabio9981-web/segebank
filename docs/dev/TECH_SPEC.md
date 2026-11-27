@@ -1,7 +1,7 @@
 # 소개뱅크 개발 설계서 (Technical Spec v1.0)
 
 > 기준 문서(최신이 우선):
-> - 수당: [기준서 v0.3](../BONUS_RULES_V0.3.md) + [v0.4 변경안(일간 정산)](../BONUS_RULES_V0.4.md) · [일간 정산 설계](../DAILY_SETTLEMENT_DESIGN.md)
+> - 수당: **[기준서 v1.0](../BONUS_RULES_V1.0.md)** · [일간 정산 설계](../DAILY_SETTLEMENT_DESIGN.md)
 > - 판매 방식: [판매 방식](../SALES_MODEL_DESIGN.md)
 > - 유료회원: [유료회원 v1.1](../PAID_MEMBERSHIP_DESIGN.md)
 > - 분양: [분양](../MALL_FRANCHISE_DESIGN.md)

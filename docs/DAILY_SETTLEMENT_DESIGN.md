@@ -1,6 +1,6 @@
 # 일간 정산 · 실시간 수당 포인트 설계 (v1.0)
 
-> 규칙: [기준서 v0.4 변경안](BONUS_RULES_V0.4.md) · 데이터: [schema.sql](dev/schema.sql) · 개발: [개발 설계서](dev/TECH_SPEC.md)
+> 규칙: [기준서 v1.0](BONUS_RULES_V1.0.md) · 데이터: [schema.sql](dev/schema.sql) · 개발: [개발 설계서](dev/TECH_SPEC.md)
 
 ---
 
