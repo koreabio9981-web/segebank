@@ -2,7 +2,7 @@
 
 > 상태: **확정본** = v0.3 본문 + 부록 C(v0.3.1) + v0.4 변경안 + 월말 처리 대안. 대표 승인, 변호사 확인 완료(2026-11-27, 대표 보고).
 > 다단계판매업 등록 신청과 판매원 고지에 쓰는 단일 문서입니다. 이전 버전([v0.3](BONUS_RULES_V0.3.md), [v0.4](BONUS_RULES_V0.4.md))은 이력으로만 보관합니다.
-> ⚠ 변호사 의견서 사본을 이 문서와 함께 보관하세요. `[세무 확인]` 항목은 세무사 확인 후 시행합니다.
+> ⚠ 변호사 의견서 사본을 이 문서와 함께 보관하세요. 원천징수는 지급(출금) 시점으로 확정했습니다. 지급명세서 제출 주기는 세무사와 맞추세요.
 > 시스템: [일간 정산 설계](DAILY_SETTLEMENT_DESIGN.md) · [개발 설계서](dev/TECH_SPEC.md) · 시뮬레이터 `simulation/`
 
 ---
@@ -95,7 +95,7 @@
 
 **제12조 (출금)**
 ① 출금 가능 잔액 안에서 1,000원 단위로, 10,000원 이상 신청할 수 있다.
-② 사업소득 원천징수 3.3%를 뺀 금액을 신청 다음 영업일까지 본인 계좌로 보낸다. `[세무 확인]` 원천징수 시점
+② 사업소득 원천징수 3.3%는 **지급 시점(출금 이체 시)**에 떼고, 나머지를 신청 다음 영업일까지 본인 계좌로 보낸다. 월말 자동 출금도 같다. (대표 결정 2026-11-27)
 ③ 다음 경우에는 출금을 보류하고 알린다.
 1. 주민등록번호 미등록
 2. 계좌 미확인
@@ -153,7 +153,7 @@
     { "code": "PLATINUM", "pv": 20000000, "rollup_open": 9, "shares": 2 },
     { "code": "DIAMOND", "pv": 50000000, "rollup_open": 10, "shares": 4 }
   ],
-  "withdrawal": { "min_krw": 10000, "unit_krw": 1000, "tax": 0.033, "transfer": "next_business_day",
+  "withdrawal": { "min_krw": 10000, "unit_krw": 1000, "tax": 0.033, "tax_at": "payout", "transfer": "next_business_day",
                   "month_end_auto": { "at": "22:00", "carry_below_krw": 10000 } },
   "bonus_points_spend_on_goods": false,
   "free_points_expiry": "END_OF_MONTH",
