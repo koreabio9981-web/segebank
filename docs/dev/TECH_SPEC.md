@@ -214,7 +214,9 @@ src/bonus-engine/
 | bonus.estimate | 결제·확정·반품 시 | 실시간 예상 수당 생성·갱신 |
 | qualification.daily | 매일 00:10 | 직전 30일 PV 자격 |
 | rank.evaluate | 매월 1일 02:00 | 직급 판정, rank_history |
-| points.expire / points.notify | 매일 | 30일·7일 전 알림 |
+| points.expireMonthly | 매월 1일 00:05 | 지난달 지급 보너스·적립금·이벤트 포인트 소멸(EXPIRE), 소멸액 회사 이익 기록 |
+| points.notify | 매일 | 무료 포인트 말일 7일·1일 전, 충전 포인트 30일·7일 전 알림 |
+| payout.monthEndSweep | 매월 말일 22:00 | 수당 출금 가능 잔액 전액 자동 출금 신청(source=AUTO_MONTHEND). 1만 원 미만·보류 대상은 이월, 소멸 없음 |
 | mutualAid.issue / retry | 결제 완료 시 · 10분 | 3회 실패 시 관리자 알림 |
 | payout.batch | 영업일 16:00 | 그날 출금 신청 → 배치(자동 승인 규칙 / 2인 승인) |
 | payout.export / payout.result | 배치 승인 시 | 펌뱅킹, 실패 시 잔액 복원 |

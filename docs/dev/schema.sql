@@ -234,7 +234,8 @@ CREATE TABLE membership_plans (
   id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NOT NULL REFERENCES tenants(id),
   code VARCHAR(20) NOT NULL, version INT NOT NULL, name TEXT NOT NULL,
   price BIGINT NOT NULL, points BIGINT NOT NULL, bonus_rate NUMERIC(7,4) NOT NULL DEFAULT 0 CHECK (bonus_rate <= 0.10),
-  member_discount NUMERIC(7,4), charge_valid_months INT NOT NULL DEFAULT 60, bonus_valid_months INT NOT NULL DEFAULT 12,
+  member_discount NUMERIC(7,4), charge_valid_months INT NOT NULL DEFAULT 60,      -- 충전 포인트: 5년(월 초기화 없음, 환불 가능)
+  free_points_expiry VARCHAR(16) NOT NULL DEFAULT 'END_OF_MONTH',  -- 보너스·적립금·이벤트: 지급한 달 말일 소멸
   grant_rank VARCHAR(12), effective_from TIMESTAMPTZ NOT NULL,
   status VARCHAR(10) NOT NULL DEFAULT 'SCHEDULED' CHECK (status IN ('SCHEDULED','ACTIVE','RETIRED')),
   UNIQUE (tenant_id, code, version)
@@ -348,6 +349,7 @@ CREATE TABLE withdrawals (                        -- 회원 출금 신청(기준
   withholding BIGINT NOT NULL, net BIGINT NOT NULL,
   status VARCHAR(10) NOT NULL DEFAULT 'REQUESTED' CHECK (status IN ('REQUESTED','HELD','IN_BATCH','PAID','FAILED','CANCELLED')),
   hold_reason VARCHAR(30), auto_approved BOOLEAN NOT NULL DEFAULT false,
+  source VARCHAR(16) NOT NULL DEFAULT 'MEMBER' CHECK (source IN ('MEMBER','AUTO_MONTHEND')),  -- 월말 잔액 자동 출금
   requested_at TIMESTAMPTZ NOT NULL DEFAULT now(), processed_at TIMESTAMPTZ
 );
 CREATE TABLE payout_items (                       -- 출금 신청 1건 = 1항목, 영업일 배치 이체
