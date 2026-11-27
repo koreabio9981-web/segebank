@@ -87,6 +87,29 @@ sideApp({
         + table([['번호', r => r.no], ['판매원', r => r.who], ['수당', r => won(r.amt), 'r'], ['원천징수', r => won(r.fee), 'r'], ['실지급', r => won(r.amt - r.fee), 'r'], ['계좌', r => r.bank], ['신청일', r => r.date], ['상태', r => badge(r.st)],
           ['조치', r => r.st === '보류' ? `<button class="sm ghost" onclick="toast('판매원에게 주민번호·계좌 등록 안내를 보냈습니다 (시안)')">등록 안내</button>` : '-']], DB.withdrawals))],
     }],
+    ['정책', {
+      salesmode: ['판매 방식 설정', () => card('판매자별 기본 판매 방식', table([['판매자', r => esc(r.company)], ['상태', r => badge(r.status)], ['기본 방식', r => `<select style="width:auto" onchange="toast('새로 등록하는 상품부터 적용됩니다. 변경 이력 기록 (시안)')">${Object.entries(MODE).map(([k, v]) => `<option ${k === (r.id === 'S001' ? 'CONSIGN' : 'DIRECT_BUY') ? 'selected' : ''}>${v}</option>`).join('')}</select>`], ['수수료', () => DB.settings.commission + '%', 'r']], DB.sellers.filter(x => x.status === '승인')))
+        + card('상품별 판매 방식 · PV · 포인트', table([['상품', r => esc(r.name)], ['판매자', r => sellerName(r.seller)], ['판매 방식', r => MODE[r.mode || 'CONSIGN']], ['PV', r => r.mode === 'MARKETPLACE' ? '<span class="help">없음</span>' : (r.pv || 0).toLocaleString(), 'r'], ['포인트 결제', r => r.mode === 'MARKETPLACE' ? badge('불가') : badge('가능')]], DB.products))
+        + card('잠금 (위험한 설정)', table([['설정', r => r[0]], ['잠금 해제 조건', r => r[1]], ['상태', r => r[2]]], [
+            ['중개 상품에 PV·수당 부여', '변호사 의견서 + 대표 2단계 인증 + 수당 기준 3개월 예약', '🔒 잠김'],
+            ['중개 상품에 포인트 결제 허용', '선불전자지급수단 등록번호 + 대표 2단계 인증', '🔒 잠김'],
+            ['유료회원 운영 모드 2(유료회원만 판매원)', '변호사 의견서 + 대표 2단계 인증 + 3개월 예약', '🔒 잠김']]))],
+      bonusplan: ['수당 규정 버전', () => card('수당 기준서 버전', table([['버전', r => r[0]], ['적용', r => r[1]], ['통지', r => r[2]], ['상태', r => badge(r[3])]], [
+            ['v1.0', '다단계판매업 등록일부터', '등록 시 전체 고지', '적용중'], ['v0.4', '—', '—', '이력'], ['v0.3', '—', '—', '이력']]))
+        + card('새 버전 예약', `<div class="form2"><div class="field"><label>버전</label><input value="v1.1"></div><div class="field"><label>적용일 (통지일로부터 3개월 이상)</label><input id="eff" type="date" value="2027-01-15"></div></div>
+          <div class="field"><label>변경 내용</label><textarea rows="2">예: 직급 보너스 지분 조정</textarea></div>
+          <button onclick="checkEff()">예약 · 전체 판매원 통지</button> <span class="help">3개월 미만이면 저장되지 않습니다(기준서 제17조).</span>`)
+        + card('통지 기록', table([['일시', r => r[0]], ['대상', r => r[1]], ['방법', r => r[2]], ['결과', r => r[3]]], [['2026-11-27 10:00', '판매원 전체 1,204명', '알림톡 → 실패 시 문자', '성공 1,198 · 문자 대체 6']]))],
+      points: ['포인트 관리', () => kpis([['충전 포인트 발행잔액', won(1284500000)], ['보너스·적립금 잔액', won(46200000)], ['이번 달 말일 소멸 예정(무료)', won(31800000)], ['수당 포인트(출금 가능+대기)', won(512300000)]])
+        + card('선불전자지급수단 등록 면제 기준 대비 (충전 포인트)', `${table([['기준', r => r[0]], ['현재', r => r[1], 'r'], ['비율', r => r[2], 'r']], [['분기말 발행잔액 30억 원 미만', won(1284500000), '42.8%'], ['연간 총발행액 500억 원 미만', won(6410000000), '12.8%'], ['가맹점(포인트 사용처) 1개', '소개뱅크 판매 상품만', '충족']])}
+          <p class="help">80%에 도달하면 경고합니다. 중개 상품 포인트 결제는 잠겨 있습니다.</p>`)
+        + card('충전 포인트 환불 요청', table([['요청일', r => r[0]], ['회원', r => r[1]], ['남은 충전 포인트', r => won(r[2]), 'r'], ['처리', () => `<button class="sm" onclick="toast('환불 처리 (시안)')">환불</button>`]], [['2026-11-26', 'park7', 420000]]))],
+      shops: ['분양몰 관리', () => kpis([['운영 중 개인몰', '312개'], ['이번 달 개인몰 매출', won(186400000)], ['신고 접수', '2건'], ['독립몰 신청', '1건']])
+        + card('회원 개인몰 (자동 개설)', table([['주소', r => r[0] + '.sogaebank.com'], ['주인', r => r[1]], ['개설일', r => r[2]], ['이번 달 매출', r => won(r[3]), 'r'], ['신고', r => r[4], 'r'], ['상태', r => badge(r[5])], ['관리', r => `<button class="sm ${r[5] === '정지' ? '' : 'bad'}" onclick="toast('${r[5] === '정지' ? '정지 해제' : '정지 (사유 기록)'} (시안)')">${r[5] === '정지' ? '해제' : '정지'}</button>`]],
+            [['kim01', '김민수', '2026-09-02', 1626000, 0, '정상'], ['minsu-health', '이서연', '2026-10-11', 482000, 0, '정상'], ['best-deal', '박준호', '2026-11-03', 92000, 2, '정상']]))
+        + card('주소 금칙어', `<p>admin, www, mail, api, seller, office, segebank, sogaebank, smart79, coupang, naver … <button class="sm ghost" onclick="toast('금칙어 추가 (시안)')">추가</button></p><p class="help">소개글 금지 문구: 수익 보장, 원금 보장, 월 수익, 확정 수익, 고수익, 무조건, 투자</p>`)
+        + card('판매자 독립몰 신청 (분양 B)', table([['판매자', r => r[0]], ['희망 주소', r => r[1]], ['신청일', r => r[2]], ['처리', () => `<button class="sm" onclick="toast('승인 (시안)')">승인</button> <button class="sm bad" onclick="toast('반려 (시안)')">반려</button>`]], [['그린푸드', 'greenfood.sogaebank.com', '2026-11-25']]))],
+    }],
     ['게시판 · 설정', {
       notice: ['공지 관리', () => card('공지 작성', `<div class="form2"><div class="field"><label>제목</label><input id="nt"></div><div class="field"><label>대상</label><select id="nto"><option>전체</option><option>회원</option><option>판매자</option></select></div></div><div class="field"><label>내용</label><textarea id="nb" rows="3"></textarea></div><button onclick="addNotice()">등록</button>`)
         + card('공지 목록', table([['제목', r => esc(r.t)], ['대상', r => r.to], ['날짜', r => r.d]], DB.notices))],
@@ -102,6 +125,11 @@ sideApp({
   ],
 });
 
+function checkEff(){
+  const eff = new Date(document.getElementById('eff').value), min = new Date(); min.setMonth(min.getMonth() + 3);
+  if (isNaN(eff) || eff < min) return toast('적용일은 오늘부터 3개월 이후여야 합니다');
+  toast('예약 완료 · 전체 판매원에게 통지했습니다 (시안)');
+}
 function blockP(no){ const p = productBy(no); p.status = p.status === '판매중지' ? (p.stock ? '판매중' : '품절') : '판매중지'; save(); rerender(); }
 function addCat(){ const v = document.getElementById('newcat').value.trim(); if (!v) return; if (DB.categories.includes(v)) return toast('이미 있습니다'); DB.categories.push(v); save(); rerender(); }
 function wd(no, st){ DB.withdrawals.find(w => w.no === no).st = st; save(); toast(st === '지급완료' ? '지급 처리했습니다' : '반려했습니다'); rerender(); }

@@ -71,12 +71,18 @@ const SEED = {
 };
 
 /* PV = 공급가(판매가 ÷ 1.1, 부가세 제외) × 70% (기준서 v0.3 제2조, 시스템 자동 계산) */
-SEED.products.forEach(p => p.pv = Math.floor(p.price / 1.1 * 0.7));
+/* 판매 방식(관리자 설정): 그린푸드 = 위탁, 헬스플러스 = 직매입, 미네랄 워터 = 중개(오픈마켓) 예시 */
+SEED.products.forEach(p => {
+  p.mode = p.no === 205 ? 'MARKETPLACE' : p.seller === 'S001' ? 'CONSIGN' : 'DIRECT_BUY';
+  p.pv = p.mode === 'MARKETPLACE' ? 0 : Math.floor(p.price / 1.1 * 0.7);
+  p.pointOk = p.mode !== 'MARKETPLACE';
+});
+const MODE = {DIRECT_BUY:'직매입', CONSIGN:'위탁 판매', MARKETPLACE:'중개(오픈마켓)'};
 
 /* ===== 시안용 저장소 =====
    판매자 신청 → 관리자 승인 흐름을 화면끼리 이어서 보여 주려고 브라우저 저장소(localStorage)를 씁니다.
    실제 서비스에서는 서버 DB가 이 역할을 합니다. */
-const KEY = 'segebank-mock-v3';
+const KEY = 'segebank-mock-v4';
 const DB = (() => {
   let data;
   try { data = JSON.parse(localStorage.getItem(KEY)); } catch (e) { data = null; }
@@ -97,7 +103,7 @@ const orderTitle = o => { const p = productBy(o.items[0][0]); return (p ? p.name
 
 const BADGE = {
   정상:'ok',지급완료:'ok',승인:'ok',배송완료:'ok',구매확정:'ok',답변완료:'ok',판매중:'ok',
-  대기:'warn',승인대기:'warn',정산예정:'warn',지급예정:'warn',이월:'g',보류:'bad',신청:'warn',출금완료:'ok',적립:'ok',예상:'n',답변대기:'warn',배송준비:'warn',
+  대기:'warn',승인대기:'warn',정산예정:'warn',지급예정:'warn',이월:'g',보류:'bad',신청:'warn',출금완료:'ok',적립:'ok',예상:'n',가능:'ok',불가:'g',적용중:'ok',이력:'g',답변대기:'warn',배송준비:'warn',
   결제완료:'n',배송중:'n',
   정지:'bad',반려:'bad',품절:'bad',판매중지:'bad',오류:'bad',
   숨김:'g',취소:'g',

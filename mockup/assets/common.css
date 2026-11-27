@@ -40,6 +40,8 @@ tr.err td{background:#fff6f6}
 .b.ok{background:#e4f5ec;color:var(--ok)}.b.warn{background:#fdf2dc;color:var(--warn)}.b.bad{background:#fbe5e5;color:var(--bad)}.b.n{background:var(--pri2);color:var(--pri)}.b.g{background:#eef0f4;color:var(--sub)}
 .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
 .bar input,.bar select{width:auto;flex:1;min-width:140px}
+.bar input[type=radio],.bar input[type=checkbox]{flex:none;min-width:0;width:auto}
+.bar label{display:inline-flex;gap:6px;align-items:center}
 .field{margin-bottom:12px}.field label{display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
 .field label i{color:var(--bad);font-style:normal}
 .form2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
