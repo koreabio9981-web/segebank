@@ -184,6 +184,7 @@ CREATE TABLE orders (
   storefront_id BIGINT REFERENCES storefronts(id),-- 어느 분양몰에서 팔렸나
   ref_member_id BIGINT REFERENCES members(user_id),-- 실적 귀속: 비회원·소비자 구매는 개인몰 주인 PV로 귀속(기준서 v0.3.1)
   items_total BIGINT NOT NULL, ship_total BIGINT NOT NULL, paid_cash BIGINT NOT NULL DEFAULT 0, paid_points BIGINT NOT NULL DEFAULT 0,
+  paid_bonus_points BIGINT NOT NULL DEFAULT 0,      -- 수당 포인트 결제액(원천징수 별도 기록)
   receiver JSONB NOT NULL, status VARCHAR(12) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','PAID','PARTIAL','CANCELLED')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (tenant_id, order_no)
 );
@@ -324,7 +325,7 @@ CREATE TABLE earnings_ledger (
   user_id BIGINT NOT NULL REFERENCES members(user_id),
   bucket VARCHAR(10) NOT NULL CHECK (bucket IN ('AVAILABLE','RESERVED')),   -- 출금 가능 / 정산 대기(유보)
   kind VARCHAR(16) NOT NULL CHECK (kind IN ('DAILY_ACCRUAL','RESERVE_RELEASE','SCALING_ADJ','CARRY_ADJ','CLAWBACK',
-        'WITHDRAW_HOLD','WITHDRAW_PAID','WITHDRAW_FAIL','WITHHOLDING','ADJUST')),
+        'WITHDRAW_HOLD','WITHDRAW_PAID','WITHDRAW_FAIL','WITHHOLDING','SPEND','SPEND_REFUND','ADJUST')),  -- SPEND: 수당 포인트로 상품 결제
   amount BIGINT NOT NULL, ref_type VARCHAR(20), ref_id BIGINT, memo TEXT, created_by BIGINT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

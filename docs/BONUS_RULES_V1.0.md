@@ -101,7 +101,7 @@
 2. 계좌 미확인
 3. 잔액 마이너스
 
-④ 수당 포인트는 원화로만 출금한다. 쇼핑 포인트로 바꾸거나 양도할 수 없고, 상품 결제에는 쓰지 않는다.
+④ 수당 포인트는 쇼핑 포인트로 바꾸거나 양도할 수 없다. 다만 **출금 가능 잔액으로 몰의 상품(회사 공급 상품)을 결제할 수 있다**. 이때 결제한 금액은 그 시점에 지급된 것으로 보아 원천징수 3.3%를 함께 차감한다. 예: 10,000원 결제 시 수당 포인트 10,341P 차감(10,000 + 원천징수 341). (대표 결정 2026-11-27) `[세무 확인: 현물 지급 원천징수 방식]`
 ⑤ **매월 말일 22시** 기준 출금 가능 잔액 전액을 자동으로 출금 신청한다. 1만 원 미만이거나 보류 사유가 있으면 이월하며, **수당 포인트는 소멸하지 않는다**.
 
 **제13조 (쇼핑 포인트와의 구분)**
@@ -155,7 +155,7 @@
   ],
   "withdrawal": { "min_krw": 10000, "unit_krw": 1000, "tax": 0.033, "tax_at": "payout", "transfer": "next_business_day",
                   "month_end_auto": { "at": "22:00", "carry_below_krw": 10000 } },
-  "bonus_points_spend_on_goods": false,
+  "bonus_points_spend_on_goods": { "allowed": true, "scope": "company_supplied", "withholding": "gross_up" },
   "free_points_expiry": "END_OF_MONTH",
   "realtime_estimate": true
 }

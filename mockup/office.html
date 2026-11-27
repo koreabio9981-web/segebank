@@ -67,7 +67,7 @@ sideApp({
     ['포인트 지갑', {
       wallet: ['내 포인트 지갑', () => `
         <div class="grid">
-          <div class="card kpi" style="border-top:4px solid var(--ok)"><div class="l">출금 가능</div><div class="v">${pt(WALLET.avail)}</div><div class="help">확정 수당의 90% + 월말 해제분 · 1P = 1원 · <b>매월 말일 잔액 자동 출금</b>(소멸 없음)</div></div>
+          <div class="card kpi" style="border-top:4px solid var(--ok)"><div class="l">출금 가능</div><div class="v">${pt(WALLET.avail)}</div><div class="help">확정 수당의 90% + 월말 해제분 · 1P = 1원 · <b>매월 말일 잔액 자동 출금</b>(소멸 없음)<br>몰 결제 가능(원천징수 3.3% 함께 차감) · <a href="mall.html" style="color:var(--pri)">쇼핑하기</a></div></div>
           <div class="card kpi"><div class="l">출금 불가 · 정산 대기</div><div class="v">${pt(WALLET.reserved)}</div><div class="help">12/3 월말 확정 후 출금 가능으로 이동</div></div>
           <div class="card kpi"><div class="l">출금 불가 · 쇼핑 전용</div><div class="v">${pt(WALLET.shop + WALLET.free)}</div><div class="help">충전 포인트 ${pt(WALLET.shop)} (5년·환불 가능)<br><span style="color:var(--bad)">보너스·적립금 ${pt(WALLET.free)} · 11/30 소멸 예정</span> · <a href="mall.html" style="color:var(--pri)">쇼핑하기</a></div></div>
           <div class="card kpi"><div class="l">예상 수당 (구매 확정 전)</div><div class="v">+${pt(WALLET.est)}</div><div class="help">잔액 아님 · 확정 다음 날 새벽 정산</div></div>
