@@ -1,0 +1,1 @@
+{ "extends": "next/core-web-vitals", "ignorePatterns": ["mockup/**", "simulation/**", "marketing/**", "mailserver/**", "docs/**"] }

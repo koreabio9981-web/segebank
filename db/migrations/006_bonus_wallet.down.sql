@@ -1,0 +1,13 @@
+-- 006_bonus_wallet 되돌리기
+DROP VIEW IF EXISTS earnings_balances;
+DROP TABLE IF EXISTS payout_items CASCADE;
+DROP TABLE IF EXISTS withdrawals CASCADE;
+DROP TABLE IF EXISTS payout_batches CASCADE;
+DROP TABLE IF EXISTS earnings_ledger CASCADE;
+DROP TABLE IF EXISTS binary_carry_lots CASCADE;
+DROP TABLE IF EXISTS binary_volume CASCADE;
+DROP TABLE IF EXISTS qualification_daily CASCADE;
+DROP TABLE IF EXISTS bonus_estimates CASCADE;
+DROP TABLE IF EXISTS bonus_items CASCADE;
+DROP TABLE IF EXISTS bonus_runs CASCADE;
+DROP TABLE IF EXISTS bonus_plans CASCADE;

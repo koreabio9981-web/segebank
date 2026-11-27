@@ -1,0 +1,5 @@
+-- 005_points 되돌리기
+DROP TABLE IF EXISTS point_tx CASCADE;
+DROP TABLE IF EXISTS point_lots CASCADE;
+DROP TABLE IF EXISTS memberships CASCADE;
+DROP TABLE IF EXISTS membership_plans CASCADE;

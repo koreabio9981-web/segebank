@@ -1,0 +1,37 @@
+{
+  "name": "sogaebank",
+  "version": "0.1.0",
+  "private": true,
+  "description": "소개뱅크 몰·회원 오피스·판매자센터·관리자",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3000}",
+    "lint": "next lint && node scripts/check-banned-phrases.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate": "node scripts/db/migrate.mjs up",
+    "db:rollback": "node scripts/db/migrate.mjs down",
+    "db:redo": "node scripts/db/migrate.mjs redo",
+    "db:seed": "node scripts/db/migrate.mjs seed"
+  },
+  "dependencies": {
+    "next": "15.5.29",
+    "pg": "8.23.1",
+    "react": "19.1.10",
+    "react-dom": "19.1.10"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.6",
+    "@types/pg": "8.11.10",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "eslint": "8.57.1",
+    "eslint-config-next": "15.5.29",
+    "typescript": "5.6.3",
+    "vitest": "3.2.7"
+  }
+}

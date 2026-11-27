@@ -400,6 +400,6 @@ BEGIN
     'point_lots','point_tx','bonus_plans','bonus_runs','earnings_ledger','payout_batches','payout_items','withdrawals','bonus_estimates','notices','inquiries','notifications','distributor_tax_ids','sensitive_access_logs','memberships']
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
-    EXECUTE format('CREATE POLICY tenant_isolation ON %I USING (tenant_id = current_setting(''app.tenant_id'', true)::bigint)', t);
+    EXECUTE format('CREATE POLICY tenant_isolation ON %I USING (tenant_id = NULLIF(current_setting(''app.tenant_id'', true), '''')::bigint)', t);
   END LOOP;
 END $$;

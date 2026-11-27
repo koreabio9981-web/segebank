@@ -1,0 +1,13 @@
+/* 디자인 토큰: mockup/assets/common.css 기준 */
+:root {
+  --bg: #f4f6fa; --card: #ffffff; --ink: #1d2433; --sub: #6b7487; --line: #e3e7ef;
+  --pri: #2457d6; --pri2: #e8eefc; --acc: #ff7a1a; --ok: #1a8f5a; --warn: #c27a00; --bad: #c23b3b; --side: #16213a;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: -apple-system, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; font-size: 15px; line-height: 1.55; }
+a { color: inherit; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-left, 0px)); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+.brand { font-weight: 800; font-size: 22px; } .brand span { color: var(--pri); }
+.muted { color: var(--sub); }
