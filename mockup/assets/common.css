@@ -53,7 +53,7 @@ tr.err td{background:#fff6f6}
 .steps div.done{background:var(--pri2);color:var(--pri)}
 .notice-box{padding:12px 14px;border-radius:8px;background:#fdf2dc;color:#7a5200;margin-bottom:14px;font-size:13px}
 .notice-box.ok{background:#e4f5ec;color:#145c3b}.notice-box.bad{background:#fbe5e5;color:#7d2323}
-.drop{border:2px dashed #b9c4da;border-radius:10px;padding:28px;text-align:center;color:var(--sub);cursor:pointer;background:#fafbfd}
+.drop{display:block;border:2px dashed #b9c4da;border-radius:10px;padding:28px;text-align:center;color:var(--sub);cursor:pointer;background:#fafbfd}
 .drop.over{border-color:var(--pri);background:var(--pri2)}
 /* 조직도(가로) */
 .tree{overflow-x:auto;padding:4px 0 8px}
