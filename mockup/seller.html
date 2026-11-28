@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소개뱅크 판매자센터 시안</title>
+<link rel="stylesheet" href="assets/common.css">
+</head>
+<body>
+<script src="assets/common.js"></script>
+<script>
+/* 데모 판매자 계정: DB.currentSeller 에 판매자 id 저장 ('' = 아직 신청 안 한 새 사용자) */
+if (DB.currentSeller === undefined) DB.currentSeller = 'S001';
+const ME = () => sellerBy(DB.currentSeller);
+const myProducts = () => DB.products.filter(p => p.seller === DB.currentSeller);
+const myOrders = () => DB.orders.filter(o => o.items.some(([no]) => productBy(no)?.seller === DB.currentSeller));
+const mySales = o => o.items.filter(([no]) => productBy(no)?.seller === DB.currentSeller).reduce((s, [no, q]) => s + productBy(no).price * q, 0);
+
+function switchSeller(v){ DB.currentSeller = v; save(); location.hash = ''; rerender(); }
+const roleBox = () => `<div>판매자 · ${ME() ? esc(ME().company) : '신규 사용자'}</div>
+  <select style="margin-top:6px;padding:4px;font-size:12px" onchange="switchSeller(this.value)">
+    <option value="" ${!DB.currentSeller ? 'selected' : ''}>데모: 신규 사용자(미신청)</option>
+    ${DB.sellers.map(s => `<option value="${s.id}" ${s.id === DB.currentSeller ? 'selected' : ''}>데모: ${esc(s.company)} (${s.status})</option>`).join('')}
+  </select>`;
+
+const flowSteps = cur => `<div class="steps">${['입점 신청', '관리자 심사', '승인 완료', '상품 등록'].map((s, i) => `<div class="${i < cur ? 'done' : i === cur ? 'on' : ''}">${i + 1}. ${s}</div>`).join('')}</div>`;
+
+/* ===== 입점 신청 / 심사 상태 화면 (승인 전에는 메뉴 대신 이 화면만 보임) ===== */
+function guard(){
+  const s = ME();
+  if (!s) return {title:'판매자 입점 신청', html: flowSteps(0) + card('사업자 정보', `
+    <div class="notice-box">입점 신청 후 관리자가 승인해야 상품을 등록할 수 있습니다. 보통 1~2 영업일이 걸립니다(시안 기준).</div>
+    <div class="form2">
+      <div class="field"><label>상호(회사명) <i>*</i></label><input id="a_company"></div>
+      <div class="field"><label>대표자 <i>*</i></label><input id="a_ceo"></div>
+      <div class="field"><label>사업자등록번호 <i>*</i></label><input id="a_biz" placeholder="000-00-00000"></div>
+      <div class="field"><label>통신판매업 신고번호 <i>*</i></label><input id="a_mail" placeholder="제 2026-서울○○-0000호"></div>
+      <div class="field"><label>담당자 연락처 <i>*</i></label><input id="a_phone"></div>
+      <div class="field"><label>이메일 <i>*</i></label><input id="a_email" type="email"></div>
+      <div class="field"><label>주력 카테고리</label><select id="a_cat">${DB.categories.map(c => `<option>${c}</option>`).join('')}</select></div>
+      <div class="field"><label>정산 계좌 (은행 / 계좌번호 / 예금주)</label><input id="a_bank" placeholder="국민 / 123-456-789 / 그린푸드"></div>
+      <div class="field"><label>사업자등록증 사본 <i>*</i></label><input type="file" accept=".pdf,.jpg,.png"></div>
+      <div class="field"><label>통신판매업 신고증 사본 <i>*</i></label><input type="file" accept=".pdf,.jpg,.png"></div>
+    </div>
+    <label style="display:flex;gap:6px;align-items:center;margin:6px 0 14px"><input type="checkbox" id="a_agree" style="width:auto"> 판매자 이용약관 및 수수료 정책(판매 금액의 12%, 시안 기준)에 동의합니다</label>
+    <button onclick="apply()">입점 신청하기</button>`)};
+  if (s.status === '승인대기') return {title:'입점 심사 중', html: flowSteps(1) + card('', `
+    <div class="notice-box">${esc(s.company)}의 입점 신청을 관리자가 심사하고 있습니다. 승인되면 상품을 등록할 수 있습니다.</div>
+    ${table([['항목', r => r[0]], ['내용', r => esc(r[1])]], [['신청번호', s.id], ['상호', s.company], ['대표자', s.ceo], ['사업자번호', s.bizNo], ['신청일', s.applied], ['상태', '승인대기']])}
+    <p class="help">데모: <a href="admin.html#sellerApprove" style="color:var(--pri)">관리자 화면 → 판매자 승인</a>에서 승인한 뒤 이 화면을 새로 고치면 판매자센터가 열립니다.</p>`)};
+  if (s.status === '반려') return {title:'입점 신청 반려', html: flowSteps(1) + card('', `
+    <div class="notice-box bad">입점 신청이 반려되었습니다. 사유: <b>${esc(s.reason || '사유 없음')}</b></div>
+    <p>사유를 보완해서 다시 신청할 수 있습니다.</p><button onclick="reapply()">보완해서 다시 신청</button>`)};
+  if (s.status === '정지') return {title:'판매 정지', html: card('', `<div class="notice-box bad">판매가 정지된 계정입니다. 사유: ${esc(s.reason || '-')}<br>관리자에게 문의하세요.</div>`)};
+  return null;
+}
+function apply(){
+  const g = id => document.getElementById(id).value.trim();
+  const need = [['a_company', '상호'], ['a_ceo', '대표자'], ['a_biz', '사업자등록번호'], ['a_mail', '통신판매업 신고번호'], ['a_phone', '연락처'], ['a_email', '이메일']];
+  const miss = need.find(([id]) => !g(id)); if (miss) return toast(`${miss[1]}을(를) 입력하세요`);
+  if (!/^\d{3}-\d{2}-\d{5}$/.test(g('a_biz'))) return toast('사업자등록번호 형식: 000-00-00000');
+  if (!document.getElementById('a_agree').checked) return toast('약관에 동의해 주세요');
+  const id = 'S' + String(DB.sellers.length + 1).padStart(3, '0');
+  DB.sellers.push({id, user:'new' + id, company:g('a_company'), ceo:g('a_ceo'), bizNo:g('a_biz'), phone:g('a_phone'), email:g('a_email'), cat:g('a_cat'), status:'승인대기', applied:today(), decided:'', reason:''});
+  DB.currentSeller = id; save(); toast('입점 신청을 접수했습니다'); rerender();
+}
+function reapply(){ const s = ME(); s.status = '승인대기'; s.applied = today(); s.reason = ''; save(); toast('다시 신청했습니다'); rerender(); }
+
+/* ===== 상품 개별 등록 ===== */
+function addProduct(){
+  const g = id => document.getElementById(id).value.trim();
+  const row = {상품명:g('p_name'), 카테고리:g('p_cat'), 판매가:g('p_price'), 정가:g('p_list'), 재고:g('p_stock'), 배송비:g('p_ship')};
+  const errs = validateRow(row);
+  if (errs.length) return toast(errs[0]);
+  DB.products.unshift(toProduct(row, g('p_status')));
+  save(); toast('상품을 등록했습니다'); location.hash = 'products';
+}
+
+/* ===== 상품 일괄 등록 =====
+   양식(CSV) 내려받기 → 작성 → 업로드 → 줄마다 검사 → 정상 줄만 등록 */
+const COLS = ['상품명', '카테고리', '판매가', '정가', '재고', '옵션', '대표이미지URL', '배송비', '상세설명'];
+const REQUIRED = ['상품명', '카테고리', '판매가', '재고'];
+let bulkRows = null;
+
+function validateRow(r){
+  const e = [];
+  REQUIRED.forEach(c => { if (!String(r[c] ?? '').trim()) e.push(`${c} 빈칸`); });
+  if (r.상품명 && r.상품명.length > 60) e.push('상품명 60자 초과');
+  if (r.카테고리 && !DB.categories.includes(r.카테고리)) e.push(`없는 카테고리(${r.카테고리})`);
+  ['판매가', '정가', '재고', '배송비'].forEach(c => { if (r[c] && !/^\d+$/.test(String(r[c]).replace(/,/g, ''))) e.push(`${c} 숫자 아님`); });
+  const n = c => +String(r[c] || 0).replace(/,/g, '');
+  if (r.판매가 && n('판매가') <= 0) e.push('판매가 0원');
+  if (r.정가 && n('정가') && n('정가') < n('판매가')) e.push('정가가 판매가보다 낮음');
+  return e;
+}
+function toProduct(r, status = '판매중'){
+  const n = c => +String(r[c] || 0).replace(/,/g, '');
+  const colors = ['#d9534f', '#2e86c1', '#e0a800', '#48c9b0', '#8e44ad', '#5d6d7e'];
+  return {no: Math.max(...DB.products.map(p => p.no)) + 1, seller: DB.currentSeller, name: r.상품명, cat: r.카테고리, price: n('판매가'), list: n('정가') || n('판매가'),
+    stock: n('재고'), pv: Math.floor(n('판매가') / 1.1 * 0.7), ship: n('배송비'), status: n('재고') === 0 && status === '판매중' ? '품절' : status, color: colors[DB.products.length % colors.length]};
+}
+function parseCSV(text){
+  text = text.replace(/^﻿/, '');
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"' && text[i + 1] === '"'){ cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ','){ row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r'){ if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim()));
+}
+const toCSV = rows => '﻿' + rows.map(r => r.map(v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v).join(',')).join('\r\n');
+function download(name, text){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'text/csv;charset=utf-8'})); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function downloadTemplate(){
+  download('segebank_product_bulk_template.csv', toCSV([COLS,
+    ['유기농 사과 5kg', '식품', '39000', '45000', '100', '크기:중/대', 'https://example.com/apple.jpg', '3000', '경북 청송 사과'],
+    ['천연 비누 3개입', '뷰티', '15000', '', '250', '', '', '0', '']]));
+  toast('양식을 내려받았습니다. 엑셀로 열어 작성 후 CSV로 저장하세요');
+}
+const SAMPLE = [COLS,
+  ['유기농 사과 5kg', '식품', '39000', '45000', '100', '크기:중/대', '', '3000', '경북 청송 사과'],
+  ['천연 비누 3개입', '뷰티', '15000', '', '250', '', '', '0', ''],
+  ['', '생활', '12000', '', '50', '', '', '0', '상품명 빠진 줄'],
+  ['무선 청소기', '가전제품', '189000', '220000', '20', '', '', '0', '카테고리 오타'],
+  ['현미 10kg', '식품', '삼만원', '', '30', '', '', '0', '가격에 글자'],
+  ['수제 그래놀라 500g', '식품', '12900', '9900', '80', '', '', '3000', '정가가 더 낮음'],
+  ['국산 들기름 350ml', '식품', '18500', '22000', '0', '', '', '3000', '재고 0 → 품절로 등록'],
+];
+function loadRows(rows){
+  const head = rows[0].map(h => h.trim().replace(/\*$/, ''));
+  const miss = REQUIRED.filter(c => !head.includes(c));
+  if (miss.length) { bulkRows = null; toast(`양식이 다릅니다. 없는 열: ${miss.join(', ')}`); return; }
+  bulkRows = rows.slice(1, 1001).map((r, i) => { const o = {_line: i + 2}; head.forEach((h, j) => o[h] = (r[j] ?? '').trim()); o._errs = validateRow(o); o._err = o._errs.length > 0; return o; });
+  if (rows.length > 1001) toast('한 번에 1,000줄까지 올릴 수 있습니다. 앞 1,000줄만 읽었습니다');
+  rerender();
+}
+function readFile(file){
+  if (!file) return;
+  if (!/\.csv$/i.test(file.name)) return toast('CSV 파일만 올릴 수 있습니다 (시안). 실제 서비스는 엑셀(.xlsx)도 지원');
+  const fr = new FileReader(); fr.onload = () => loadRows(parseCSV(fr.result)); fr.readAsText(file, 'utf-8');
+}
+function commitBulk(){
+  const ok = bulkRows.filter(r => !r._err);
+  ok.forEach(r => DB.products.unshift(toProduct(r)));
+  save(); toast(`${ok.length}건을 등록했습니다`);
+  bulkRows = {done: ok.length, fail: bulkRows.length - ok.length, errs: bulkRows.filter(r => r._err)}; rerender();
+}
+function downloadErrors(list){ download('segebank_bulk_errors.csv', toCSV([['줄 번호', ...COLS, '오류'], ...list.map(r => [r._line, ...COLS.map(c => r[c] ?? ''), r._errs.join(' / ')])])); }
+
+function bulkView(){
+  const step = !bulkRows ? 1 : bulkRows.done !== undefined ? 3 : 2;
+  const steps = `<div class="steps">${['양식 내려받기', '작성 후 업로드', '검사 결과 확인', '등록 완료'].map((s, i) => `<div class="${i < step ? 'done' : i === step ? 'on' : ''}">${i + 1}. ${s}</div>`).join('')}</div>`;
+  if (step === 3) return steps + card('등록 결과', kpis([['등록 성공', bulkRows.done + '건'], ['등록 제외(오류)', bulkRows.fail + '건']])
+    + `<div style="display:flex;gap:8px;flex-wrap:wrap">${bulkRows.fail ? `<button class="ghost" onclick="downloadErrors(bulkRows.errs)">오류 줄만 내려받아 고치기</button>` : ''}<a class="btn" href="#products">상품 목록 보기</a><button class="ghost" onclick="bulkRows=null;rerender()">새로 올리기</button></div>`);
+  const upload = card('1~2. 양식 내려받기 → 파일 올리기', `
+    <div class="bar"><button class="ghost" onclick="downloadTemplate()">⬇ 일괄 등록 양식 내려받기 (CSV)</button><button class="ghost" onclick="loadRows(SAMPLE)">예시 파일로 해 보기 (오류 포함 7줄)</button></div>
+    <label class="drop" id="drop">여기에 CSV 파일을 끌어다 놓거나 <b style="color:var(--pri)">눌러서 선택</b>하세요<br><span class="help">필수 열: ${REQUIRED.join(', ')} · 한 번에 최대 1,000줄</span>
+      <input type="file" accept=".csv" style="display:none" onchange="readFile(this.files[0])"></label>
+    <details style="margin-top:12px"><summary class="help">양식 작성 규칙 보기</summary>
+      ${table([['열', r => r[0]], ['필수', r => r[1]], ['규칙', r => r[2]]], [['상품명', '필수', '60자 이내'], ['카테고리', '필수', DB.categories.join(', ') + ' 중 하나'], ['판매가', '필수', '숫자만(원). 0보다 커야 함'], ['정가', '', '비우면 판매가와 같음. 판매가보다 낮으면 오류'], ['재고', '필수', '숫자. 0이면 품절로 등록'], ['옵션', '', '예) 색상:빨강/파랑'], ['대표이미지URL', '', '비우면 등록 후 따로 올림'], ['배송비', '', '숫자. 비우면 0원(무료)'], ['상세설명', '', '자유 입력']])}</details>`);
+  if (step === 1) return steps + upload;
+  const ok = bulkRows.filter(r => !r._err).length, bad = bulkRows.length - ok;
+  return steps + card(`3. 검사 결과: 전체 ${bulkRows.length}줄 · 정상 ${ok} · 오류 ${bad}`, `
+    ${bad ? `<div class="notice-box bad">오류가 있는 ${bad}줄은 등록되지 않습니다. 정상 줄만 먼저 등록하거나, 파일을 고쳐서 다시 올리세요.</div>` : '<div class="notice-box ok">모든 줄이 정상입니다.</div>'}
+    ${table([['줄', r => r._line], ['상품명', r => esc(r.상품명) || '<span class="help">(빈칸)</span>'], ['카테고리', r => esc(r.카테고리)], ['판매가', r => esc(r.판매가), 'r'], ['재고', r => esc(r.재고), 'r'], ['PV(자동)', r => Math.floor((+String(r.판매가 || 0).replace(/,/g, '') || 0) / 1.1 * 0.7).toLocaleString(), 'r'],
+      ['결과', r => r._err ? `<span class="b bad">오류</span> <span style="color:var(--bad);font-size:12px">${r._errs.join(', ')}</span>` : badge('정상')]], bulkRows)}
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button onclick="commitBulk()" ${ok ? '' : 'disabled'}>정상 ${ok}건 등록</button>${bad ? `<button class="ghost" onclick="downloadErrors(bulkRows.filter(r=>r._err))">오류 줄 내려받기</button>` : ''}<button class="ghost" onclick="bulkRows=null;rerender()">취소</button></div>`);
+}
+
+/* ===== 화면 정의 ===== */
+sideApp({
+  brand: '판매자센터',
+  role: roleBox,
+  guard,
+  menus: [
+    ['판매 현황', {
+      dash: ['판매자 홈', () => {
+        const ps = myProducts(), os = myOrders();
+        return kpis([['판매중 상품', ps.filter(p => p.status === '판매중').length + '개'], ['신규 주문', os.filter(o => o.st === '결제완료').length + '건'], ['배송 준비', os.filter(o => o.st === '배송준비').length + '건'],
+            ['이번 달 판매액', won(os.reduce((s, o) => s + mySales(o), 0))], ['품절 상품', ps.filter(p => p.status === '품절').length + '개'], ['답변 대기 문의', DB.inquiries.filter(q => q.to === DB.currentSeller && q.st === '답변대기').length + '건']])
+          + card('바로 가기', `<div class="bar"><a class="btn" href="#add">+ 상품 개별 등록</a><a class="btn" href="#bulk">⬆ 상품 일괄 등록</a><a class="btn ghost" href="#orders">주문 처리</a></div>`)
+          + card('최근 주문', table([['주문번호', r => r.no], ['주문일', r => r.date], ['상품', r => esc(orderTitle(r))], ['내 판매액', r => won(mySales(r)), 'r'], ['상태', r => badge(r.st)]], os));
+      }],
+    }],
+    ['상품', {
+      products: ['상품 목록', () => card(`내 상품 (${myProducts().length}개)`, `<div class="bar"><input placeholder="상품명 검색"><select><option>전체 상태</option><option>판매중</option><option>품절</option><option>숨김</option></select><button>검색</button><a class="btn ghost" href="#add">+ 개별 등록</a><a class="btn ghost" href="#bulk">⬆ 일괄 등록</a></div>`
+        + table([['', r => thumb(r, 'sm')], ['번호', r => r.no], ['상품명', r => esc(r.name)], ['카테고리', r => r.cat], ['판매가', r => won(r.price), 'r'], ['재고', r => r.stock, 'r'], ['PV', r => r.pv, 'r'], ['상태', r => badge(r.status)],
+          ['관리', r => `<button class="sm ghost" onclick="editStock(${r.no})">재고</button> <button class="sm ghost" onclick="toggleHide(${r.no})">${r.status === '숨김' ? '보이기' : '숨기기'}</button>`]], myProducts(), '등록한 상품이 없습니다'))],
+      add: ['상품 개별 등록', () => card('기본 정보', `<div class="form2">
+          <div class="field"><label>상품명 <i>*</i></label><input id="p_name" maxlength="60"></div>
+          <div class="field"><label>카테고리 <i>*</i></label><select id="p_cat">${DB.categories.map(c => `<option>${c}</option>`).join('')}</select></div>
+          <div class="field"><label>판매가(원) <i>*</i></label><input id="p_price" type="number"></div>
+          <div class="field"><label>정가(원)</label><input id="p_list" type="number" placeholder="할인 전 가격"></div>
+          <div class="field"><label>재고 <i>*</i></label><input id="p_stock" type="number"></div>
+          <div class="field"><label>PV (자동 계산)</label><input disabled value="판매가 ÷ 1.1 × 70% (판매자 입력 불가)"></div>
+          <div class="field"><label>배송비(원)</label><input id="p_ship" type="number" value="3000"></div>
+          <div class="field"><label>판매 상태</label><select id="p_status"><option>판매중</option><option>숨김</option></select></div></div>`)
+        + card('옵션', `<div class="field"><label>옵션 (예: 색상:빨강/파랑, 크기:S/M/L)</label><input placeholder="없으면 비워 두세요"></div>`)
+        + card('이미지 · 상세설명', `<div class="form2"><div class="field"><label>대표 이미지</label><input type="file" accept="image/*"></div><div class="field"><label>추가 이미지 (최대 9장)</label><input type="file" accept="image/*" multiple></div></div>
+          <div class="field"><label>상세 설명</label><textarea rows="6" placeholder="실제 서비스에서는 이미지·글 편집기를 씁니다"></textarea></div>
+          <div class="field"><label>상품 고시 정보 (전자상거래법)</label><input placeholder="품명/제조사/원산지/유통기한 등 카테고리별 항목"></div>`)
+        + `<button onclick="addProduct()">상품 등록</button> <a class="btn ghost" href="#products">취소</a>`],
+      bulk: ['상품 일괄 등록', bulkView],
+    }],
+    ['주문 · 정산', {
+      orders: ['주문 · 배송 관리', () => card('주문 목록', periodBar('<select><option>전체 상태</option><option>결제완료</option><option>배송준비</option><option>배송중</option><option>배송완료</option></select>')
+        + table([['주문번호', r => r.no], ['주문일', r => r.date], ['구매자', r => r.buyer], ['상품', r => esc(orderTitle(r))], ['내 판매액', r => won(mySales(r)), 'r'], ['상태', r => badge(r.st)], ['송장', r => r.track || '-'],
+          ['처리', r => r.st === '결제완료' ? `<button class="sm" onclick="ship('${r.no}','배송준비')">발주 확인</button>` : r.st === '배송준비' ? `<button class="sm" onclick="track('${r.no}')">송장 입력</button>` : '-']], myOrders()))],
+      settle: ['정산 내역', () => card('정산 내역 (판매 수수료 12%, 월 2회)', table([['정산 기간', r => r.period], ['판매액', r => won(r.gross), 'r'], ['수수료', r => won(r.gross * r.rate / 100), 'r'], ['정산액', r => `<b>${won(r.gross * (100 - r.rate) / 100)}</b>`, 'r'], ['상태', r => badge(r.st)]],
+        DB.settlements.filter(s => s.seller === DB.currentSeller)))],
+    }],
+    ['고객 · 설정', {
+      qna: ['상품 문의', () => card('상품 문의', table([['제목', r => esc(r.t)], ['회원', r => r.who], ['날짜', r => r.d], ['상태', r => badge(r.st)], ['답변', r => esc(r.a) || `<button class="sm" onclick="answer(${DB.inquiries.indexOf(r)})">답변하기</button>`]], DB.inquiries.filter(q => q.to === DB.currentSeller)))],
+      info: ['판매자 정보', () => { const s = ME(); return card('판매자 정보', table([['항목', r => r[0]], ['내용', r => esc(r[1])]], [['판매자 번호', s.id], ['상호', s.company], ['대표자', s.ceo], ['사업자번호', s.bizNo], ['연락처', s.phone], ['이메일', s.email], ['주력 카테고리', s.cat], ['승인일', s.decided], ['상태', s.status]]))
+        + `<p class="help">상호·사업자번호 변경은 관리자 재심사가 필요합니다.</p>`; }],
+      notice: ['판매자 공지', () => card('공지', DB.notices.filter(n => n.to !== '회원').map(n => `<details style="border-bottom:1px solid var(--line);padding:10px 0"><summary><b>${esc(n.t)}</b> <span class="help">${n.d}</span></summary><p>${esc(n.body)}</p></details>`).join(''))],
+    }],
+  ],
+});
+
+/* 업로드 영역 끌어다 놓기 */
+document.addEventListener('dragover', e => { const d = e.target.closest && e.target.closest('#drop'); if (d){ e.preventDefault(); d.classList.add('over'); } });
+document.addEventListener('dragleave', e => { const d = e.target.closest && e.target.closest('#drop'); if (d) d.classList.remove('over'); });
+document.addEventListener('drop', e => { const d = e.target.closest && e.target.closest('#drop'); if (d){ e.preventDefault(); readFile(e.dataTransfer.files[0]); } });
+
+function editStock(no){ const p = productBy(no); modal(`재고 수정 · ${esc(p.name)}`, [{name:'stock', label:'재고', type:'number', value:p.stock}], v => { p.stock = +v.stock || 0; p.status = p.stock ? (p.status === '품절' ? '판매중' : p.status) : '품절'; save(); rerender(); }); }
+function toggleHide(no){ const p = productBy(no); p.status = p.status === '숨김' ? (p.stock ? '판매중' : '품절') : '숨김'; save(); rerender(); }
+function ship(no, st){ DB.orders.find(o => o.no === no).st = st; save(); toast('발주 확인했습니다'); rerender(); }
+function track(no){ modal('송장 입력', [{name:'c', label:'택배사', value:'CJ대한통운'}, {name:'n', label:'송장번호'}], v => { if (!v.n) { toast('송장번호를 입력하세요'); return false; } const o = DB.orders.find(o => o.no === no); o.track = v.c + ' ' + v.n; o.st = '배송중'; save(); toast('배송중으로 바꿨습니다'); rerender(); }); }
+function answer(i){ modal('문의 답변', [{name:'a', label:'답변', type:'textarea'}], v => { if (!v.a) return false; DB.inquiries[i].a = v.a; DB.inquiries[i].st = '답변완료'; save(); rerender(); }); }
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+이름:TEXT	설명:MEMO	SQL:MEMO
+q_연간합계	12개월 합계와 연간 지급률	SELECT Sum(순매출) AS 연간순매출, Sum(최종수당) AS 연간수당, Sum(최종수당)/Sum(순매출) AS 연간지급률, Sum(영업이익) AS 연간영업이익 FROM 월간결과;
+q_한도초과월	최종 지급률이 법정 한도를 넘은 달	SELECT 월, 최종지급률 FROM 월간결과 WHERE 최종지급률 > DLookUp("값","입력","항목ID='limit'");
+q_수당재계산	[입력] 표 값을 바꾼 뒤 실행하면 월별 순매출(저장값) 기준으로 수당·지급률을 다시 계산	SELECT 월, 순매출, 순매출*DLookUp("값","입력","항목ID='pvRatio'") AS 새PV, [새PV]*DLookUp("값","입력","항목ID='direct'")*DLookUp("값","입력","항목ID='sponsor'") AS 새직추천, [새PV]*DLookUp("값","입력","항목ID='match'")*DLookUp("값","입력","항목ID='coef'") AS 새매칭, [새PV]*DLookUp("값","입력","항목ID='roll'")*IIf(DLookUp("값","입력","항목ID='rollAvg'")<DLookUp("값","입력","항목ID='rollMax'"),DLookUp("값","입력","항목ID='rollAvg'"),DLookUp("값","입력","항목ID='rollMax'")) AS 새롤업, [새PV]*DLookUp("값","입력","항목ID='pool'") AS 새직급보너스, [새직추천]+[새매칭]+[새롤업]+[새직급보너스] AS 새삭감전합계, [새삭감전합계]/[순매출] AS 새삭감전지급률, IIf([새삭감전지급률]>DLookUp("값","입력","항목ID='alarm'"),DLookUp("값","입력","항목ID='alarm'")/[새삭감전지급률],1) AS 새삭감계수, [새삭감전합계]*[새삭감계수] AS 새최종수당, IIf([새최종수당]/[순매출]<=DLookUp("값","입력","항목ID='limit'"),"적합","초과") AS 새판정 FROM 월간결과 ORDER BY 월;
+q_민감도표	매칭률별 실효계수 지급률 (교차표)	TRANSFORM First(지급률_삭감전) SELECT 매칭률 FROM 민감도 GROUP BY 매칭률 PIVOT 실효계수;

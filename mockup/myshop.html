@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>회원 개인몰 시안</title>
+<link rel="stylesheet" href="assets/common.css">
+<style>
+  body{background:#e9edf5}
+  .stage{display:flex;gap:28px;max-width:1100px;margin:0 auto;padding:28px 16px;align-items:flex-start}
+  .story{flex:1;min-width:0}
+  .story h1{font-size:22px}.story p{color:var(--sub)}
+  .story ol{padding-left:0;list-style:none;margin:16px 0}
+  .story li a{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:8px;margin-bottom:4px;background:#fff;border:1px solid var(--line)}
+  .story li a.on{border-color:var(--pri);background:var(--pri2);color:var(--pri);font-weight:600}
+  .story li .n{width:24px;height:24px;border-radius:50%;background:var(--pri2);color:var(--pri);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+  .story li a.on .n{background:var(--pri);color:#fff}
+  .rules{font-size:13px;background:#fff;border-radius:10px;padding:14px 16px;border:1px solid var(--line)}
+  .rules b{color:var(--ink)}
+  /* 휴대폰 틀 */
+  .phone{width:390px;height:780px;flex:none;background:#fff;border-radius:40px;border:10px solid #1d2433;overflow:hidden;position:sticky;top:20px;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+  .ph-top{padding:14px 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);background:#fff}
+  .ph-top h2{font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ph-top a{font-size:20px;line-height:1}
+  .ph-body{flex:1;overflow-y:auto;padding:16px;background:#f7f8fb}
+  .ph-foot{padding:10px 16px 14px;border-top:1px solid var(--line);background:#fff}
+  .ph-foot button,.ph-foot .btn{width:100%;padding:13px;font-size:15px;text-align:center}
+  .tabbar{display:flex;border-top:1px solid var(--line);background:#fff}
+  .tabbar a{flex:1;text-align:center;font-size:11px;padding:8px 0 10px;color:var(--sub)}.tabbar a.on{color:var(--pri);font-weight:700}
+  .tabbar a span{display:block;font-size:18px}
+  .prog{display:flex;gap:4px;margin-bottom:16px}.prog i{flex:1;height:4px;border-radius:2px;background:var(--line)}.prog i.on{background:var(--pri)}
+  .slug{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden}
+  .slug input{border:0;flex:1;min-width:0}.slug span{padding:0 10px;color:var(--sub);font-size:13px;white-space:nowrap}
+  .msg{font-size:12px;margin-top:6px;min-height:18px}.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}
+  .tpl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .tpl label{border:2px solid var(--line);border-radius:10px;padding:8px;text-align:center;font-size:12px;cursor:pointer;background:#fff}
+  .tpl label.on{border-color:var(--pri)}
+  .tpl .sw{height:70px;border-radius:6px;margin-bottom:6px}
+  .opt{display:block;border:2px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;background:#fff;cursor:pointer}
+  .opt.on{border-color:var(--pri)}.opt b{display:block}.opt span{font-size:12px;color:var(--sub)}
+  .share{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;font-size:12px}
+  .share a{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 4px}.share a b{display:block;font-size:20px}
+  .qr{width:150px;height:150px;margin:10px auto;background:
+     repeating-linear-gradient(90deg,#1d2433 0 6px,#fff 6px 12px),repeating-linear-gradient(#1d2433 0 6px,#fff 6px 12px);background-blend-mode:screen;border:8px solid #fff;outline:1px solid var(--line)}
+  .owner{display:flex;gap:12px;align-items:center;background:#fff;border-radius:12px;padding:14px;margin-bottom:14px}
+  .avatar{width:52px;height:52px;border-radius:50%;background:var(--pri2);display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+  .pg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pg .nm{font-size:13px;margin-top:6px}.pg .pr{font-weight:700}
+  .star{color:#e0a800}
+  .row{display:flex;align-items:center;gap:10px;background:#fff;border-radius:10px;padding:8px 10px;margin-bottom:6px}
+  .row .t{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tog{width:40px;height:22px;border-radius:11px;background:#ccd3e0;position:relative;cursor:pointer;flex:none}
+  .tog::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+  .tog.on{background:var(--ok)}.tog.on::after{left:21px}
+  .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+  .mini div{background:#fff;border-radius:10px;padding:10px;text-align:center}.mini b{display:block;font-size:18px}.mini span{font-size:11px;color:var(--sub)}
+  .disc{font-size:11px;color:var(--sub);background:#eef0f4;border-radius:8px;padding:10px;margin-top:16px;line-height:1.6}
+  @media (max-width:860px){
+    .stage{padding:0;display:flex;flex-direction:column-reverse}
+    .story{padding:16px}
+    .phone{width:100%;height:100vh;height:100dvh;border:0;border-radius:0;position:relative;top:0;box-shadow:none}
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="story">
+    <span class="mock">시안 · 개발 전</span>
+    <h1 style="margin-top:8px">회원 개인몰 (분양 A) 휴대폰 화면</h1>
+    <p>휴대폰 화면 안의 버튼을 누르면 실제 순서대로 넘어갑니다. 아래 목록으로 원하는 화면에 바로 갈 수도 있습니다.</p>
+    <ol id="list"></ol>
+    <div class="rules"><b>확정 규칙</b><br>
+      ① 자동 개설 (금칙어 통과 시 즉시)<br>② 판매원 등록 + 본인인증 회원 누구나, 직급·구매 조건 없음<br>③ 이용료 무료<br>④ 비회원 구매도 주인 실적 인정 (35% 기준 금액 포함 여부는 변호사 확인)<br>
+      가격·상품 설명은 본사 그대로, 수익 보장 문구 금지.<br><br>
+      <a href="index.html" style="color:var(--pri)">← 시안 전체 화면 목록</a> · <a href="#" onclick="resetShop()" style="color:var(--pri)">이 시안 처음부터</a></div>
+  </div>
+  <div class="phone" id="phone"></div>
+</div>
+
+<script src="assets/common.js"></script>
+<script>
+/* 개인몰 상태 (시안용, 브라우저에 저장) */
+if (!DB.myshop) DB.myshop = {open:false, slug:'kim01', title:'김민수의 건강한 장바구니', intro:'안녕하세요, 김민수입니다. 직접 써 보고 좋았던 상품만 골랐어요.', tpl:'basic', mode:'ALL', hidden:[], featured:[201, 101]};
+const S = DB.myshop;
+const ME = DB.members[0];
+const TAKEN = ['lee22', 'park7', 'health', 'shop'];
+const BANNED_SLUG = ['admin', 'www', 'mail', 'api', 'seller', 'office', 'segebank', 'smart79', 'coupang', 'naver'];
+const BANNED_TEXT = ['수익 보장', '원금 보장', '월 수익', '확정 수익', '고수익', '무조건', '투자'];
+const TPL = {basic:['기본', '#2457d6', '#e8eefc'], warm:['따뜻한', '#d9622b', '#fdeee4'], clean:['깔끔한', '#1d2433', '#f1f3f6']};
+const products = () => DB.products.filter(p => ['판매중', '품절'].includes(p.status));
+const shown = () => products().filter(p => S.mode === 'ALL' || !S.hidden.includes(p.no));
+function resetShop(){ delete DB.myshop; save(); location.hash = ''; location.reload(); }
+
+function checkSlug(v){
+  if (!v) return ['', ''];
+  if (!/^[a-z0-9-]{3,20}$/.test(v)) return ['bad', '영문 소문자·숫자·하이픈(-) 3~20자로 입력하세요'];
+  if (/^-|-$/.test(v)) return ['bad', '하이픈으로 시작하거나 끝날 수 없습니다'];
+  if (BANNED_SLUG.some(b => v.includes(b))) return ['bad', '사용할 수 없는 단어가 들어 있습니다'];
+  if (TAKEN.includes(v)) return ['bad', '이미 사용 중인 주소입니다'];
+  return ['ok', '✔ 사용할 수 있는 주소입니다'];
+}
+const bannedIn = t => BANNED_TEXT.filter(b => t.includes(b));
+
+/* ===== 화면 정의: [목록 이름, 상단 제목, 본문, 하단, 하단탭] ===== */
+const tabs = on => `<nav class="tabbar">${[['🏠', '홈'], ['📈', '실적'], ['🛍', '내 쇼핑몰'], ['🌳', '조직'], ['👤', '내정보']].map(([i, t]) => `<a class="${t === on ? 'on' : ''}" href="${t === '내 쇼핑몰' ? '#' + (S.open ? 'manage' : 'intro') : 'javascript:void 0'}"><span>${i}</span>${t}</a>`).join('')}</nav>`;
+const prog = n => `<div class="prog">${[1, 2, 3, 4].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div>`;
+
+const V = {
+  intro: ['오피스 › 내 쇼핑몰', '내 쇼핑몰', () => `
+    <div class="card" style="text-align:center;padding:24px 16px"><div style="font-size:44px">🛍️</div>
+      <h3 style="font-size:18px;margin:8px 0">나만의 쇼핑몰을 무료로 열어 보세요</h3>
+      <p class="help" style="margin:0">소개뱅크 상품을 내 이름으로 소개하고 공유할 수 있어요.<br>내 쇼핑몰에서 판매된 상품은 <b>내 판매 실적</b>이 됩니다.</p></div>
+    ${card('개설 조건', `<div class="row"><span>✅</span><span class="t">판매원 등록 완료</span></div><div class="row"><span>✅</span><span class="t">휴대폰 본인인증 완료</span></div><div class="row"><span>💰</span><span class="t">이용료 <b>무료</b> · 구매 조건 없음</span></div>`)}
+    <p class="help">결제·배송·교환·고객센터는 소개뱅크 본사가 처리합니다. 상품 가격과 설명은 본사 정보 그대로 보입니다.</p>`,
+    () => `<a class="btn" href="#s1">내 쇼핑몰 만들기</a>`, '내 쇼핑몰'],
+
+  s1: ['개설 ① 주소 정하기', '쇼핑몰 만들기 (1/4)', () => `${prog(1)}
+    <h3 style="font-size:17px;margin-bottom:6px">쇼핑몰 주소를 정해 주세요</h3><p class="help">손님이 들어오는 주소예요. 30일에 한 번 바꿀 수 있어요.</p>
+    <div class="slug"><input id="slug" value="${esc(S.slug || ME.id)}" autocomplete="off" oninput="this.value=this.value.toLowerCase();slugMsg()"><span>.sogaebank.com</span></div>
+    <div class="msg" id="slugMsg"></div>
+    <p class="help">예: kim01, minsu-health · 사용 불가: admin, 다른 회사 이름 등</p>`,
+    () => `<button onclick="goS2()">다음</button>`],
+
+  s2: ['개설 ② 몰 소개', '쇼핑몰 만들기 (2/4)', () => `${prog(2)}
+    <div style="text-align:center;margin-bottom:14px"><div class="avatar" style="margin:0 auto;width:72px;height:72px">📷</div><span class="help">프로필 사진 (선택)</span></div>
+    <div class="field"><label>쇼핑몰 이름 <i>*</i> (20자)</label><input id="title" maxlength="20" value="${esc(S.title || ME.name + '의 건강한 장바구니')}"></div>
+    <div class="field"><label>소개글 (100자)</label><textarea id="intro" rows="4" maxlength="100" oninput="introMsg()">${esc(S.intro || '안녕하세요, 김민수입니다. 직접 써 보고 좋았던 상품만 골랐어요.')}</textarea>
+      <div class="msg" id="introMsg"></div></div>
+    <p class="help">⚠ "수익 보장", "월 수익" 같은 표현은 쓸 수 없어요(법 위반 위험).</p>`,
+    () => `<button onclick="goS3()">다음</button>`],
+
+  s3: ['개설 ③ 디자인', '쇼핑몰 만들기 (3/4)', () => `${prog(3)}
+    <h3 style="font-size:17px;margin-bottom:12px">디자인을 골라 주세요</h3>
+    <div class="tpl">${Object.entries(TPL).map(([k, [n, c, bg]]) => `<label class="${S.tpl === k ? 'on' : ''}" onclick="S.tpl='${k}';save();draw()"><div class="sw" style="background:linear-gradient(${c} 0 30%,${bg} 30%)"></div>${n}</label>`).join('')}</div>
+    <p class="help" style="margin-top:14px">나중에 [꾸미기]에서 언제든 바꿀 수 있어요.</p>`,
+    () => `<a class="btn" href="#s4">다음</a>`],
+
+  s4: ['개설 ④ 진열 방식', '쇼핑몰 만들기 (4/4)', () => `${prog(4)}
+    <h3 style="font-size:17px;margin-bottom:12px">어떤 상품을 보여 줄까요?</h3>
+    <label class="opt ${S.mode === 'ALL' ? 'on' : ''}" onclick="S.mode='ALL';save();draw()"><b>전체 상품 자동 진열 (추천)</b><span>새 상품도 자동으로 올라가요</span></label>
+    <label class="opt ${S.mode === 'PICK' ? 'on' : ''}" onclick="S.mode='PICK';save();draw()"><b>내가 직접 고르기</b><span>개설 후 [진열 상품]에서 고를 수 있어요</span></label>
+    ${card('개설 전 확인', `<div class="row"><span class="t">주소</span><b style="font-size:13px">${esc(S.slug)}.sogaebank.com</b></div><div class="row"><span class="t">이름</span><b style="font-size:13px">${esc(S.title)}</b></div><div class="row"><span class="t">디자인</span><b style="font-size:13px">${TPL[S.tpl][0]}</b></div>`)}
+    <label style="display:flex;gap:8px;font-size:12px;color:var(--sub)"><input type="checkbox" id="agree" style="width:auto" checked> 개인몰 운영 규칙(과장 광고 금지, 가격 변경 불가)에 동의합니다</label>`,
+    () => `<button onclick="openShop()">내 쇼핑몰 열기</button>`],
+
+  done: ['개설 완료 · 공유', '개설 완료', () => `
+    <div style="text-align:center;padding:10px 0 4px"><div style="font-size:44px">🎉</div><h3 style="font-size:18px;margin:6px 0">${esc(S.title)}이(가) 열렸어요!</h3>
+      <div style="background:#fff;border-radius:10px;padding:12px;font-weight:700;color:var(--pri);margin:12px 0">${esc(S.slug)}.sogaebank.com</div></div>
+    <div class="share"><a href="javascript:toast('주소를 복사했어요 (시안)')"><b>🔗</b>링크 복사</a><a href="javascript:void 0" onclick="document.getElementById('qrbox').style.display='block'"><b>▦</b>QR 코드</a><a href="javascript:toast('카카오톡 공유 창 (시안)')"><b>💬</b>카카오톡</a><a href="javascript:toast('휴대폰 공유 창 (시안)')"><b>📤</b>더보기</a></div>
+    <div id="qrbox" style="display:none;text-align:center"><div class="qr"></div><span class="help">QR 코드 (시안 그림)</span></div>
+    ${card('', `<b>📲 홈 화면에 추가하기</b><p class="help" style="margin:6px 0 0">내 쇼핑몰을 앱처럼 바로 열 수 있어요.<br>아이폰: 공유 → "홈 화면에 추가" / 안드로이드: 메뉴 → "앱 설치"</p>`)}`,
+    () => `<a class="btn" href="#shop">내 쇼핑몰 보기 (손님 화면)</a>`, '내 쇼핑몰'],
+
+  shop: ['개인몰 홈 (손님 화면)', null, () => { const [n, c, bg] = TPL[S.tpl]; const feat = shown().filter(p => S.featured.includes(p.no)), rest = shown().filter(p => !S.featured.includes(p.no));
+    const pg = ps => `<div class="pg">${ps.map(p => `<a href="javascript:toast('상품 상세 → 주문 (본사 결제 화면, 시안)')">${thumb(p)}<div class="nm">${esc(p.name)}</div><div class="pr">${won(p.price)}</div><div class="help">PV ${p.pv}${p.status === '품절' ? ' · <span style="color:var(--bad)">품절</span>' : ''}</div></a>`).join('')}</div>`;
+    return `<div style="margin:-16px -16px 14px;background:${c};color:#fff;padding:18px 16px"><div style="font-size:12px;opacity:.8">${esc(S.slug)}.sogaebank.com</div><div style="font-size:19px;font-weight:800">${esc(S.title)}</div></div>
+      <div class="owner" style="background:${bg}"><div class="avatar">🙂</div><div><b>${ME.name}</b><div class="help" style="color:var(--ink)">${esc(S.intro)}</div></div></div>
+      ${feat.length ? `<h3 style="font-size:15px;margin:0 0 10px"><span class="star">★</span> ${ME.name}님이 추천하는 상품</h3>${pg(feat)}<br>` : ''}
+      <h3 style="font-size:15px;margin:0 0 10px">전체 상품</h3>${pg(rest)}
+      <div class="card" style="margin-top:16px;text-align:center"><b>처음이세요?</b><p class="help" style="margin:4px 0 10px">가입하면 추천인 <b>${ME.name}(${ME.id})</b>이 자동으로 연결돼요.</p><button class="ghost" onclick="toast('회원가입 (추천인 자동 입력, 수정 불가) · 시안')">회원가입</button></div>
+      <div class="disc">이 쇼핑몰은 소개뱅크 판매원 <b>${ME.name}</b>의 개인몰입니다.<br>판매·결제·배송·환불 책임: (주)소개뱅크 · 대표 ○○○ · 사업자등록번호 ○○○-○○-○○○○○ · 통신판매업 ○○○ · 다단계판매업 등록번호 ○○○ · 공제조합 ○○○ · 고객센터 ○○○○-○○○○<br>(실제 정보로 바뀝니다)</div>`; },
+    () => ''],
+
+  manage: ['내 쇼핑몰 관리', '내 쇼핑몰', () => `
+    <div style="background:#fff;border-radius:12px;padding:14px;margin-bottom:14px"><div class="help">${esc(S.slug)}.sogaebank.com <span class="b ok">운영 중</span></div><div style="font-weight:700;font-size:16px;margin-top:2px">${esc(S.title)}</div></div>
+    <div class="mini"><div><b>32</b><span>오늘 방문</span></div><div><b>2</b><span>오늘 주문</span></div><div><b>1</b><span>새 가입</span></div></div>
+    <div class="share" style="margin-bottom:14px"><a href="#shop"><b>👀</b>미리보기</a><a href="#s3"><b>🎨</b>꾸미기</a><a href="#items"><b>📦</b>진열 상품</a><a href="#done"><b>📤</b>공유</a></div>
+    ${card('이번 달 개인몰 실적', `<div class="row"><span class="t">회원 구매</span><b style="font-size:13px">${won(1240000)} · PV 1,050</b></div><div class="row"><span class="t">비회원(소비자) 구매</span><b style="font-size:13px">${won(386000)} · PV 320</b></div><div class="row"><span class="t">합계</span><b style="font-size:13px">${won(1626000)} · PV 1,370</b></div><a href="#stats" class="help" style="display:block;text-align:right;margin-top:6px;color:var(--pri)">자세히 →</a>`)}`,
+    () => '', '내 쇼핑몰'],
+
+  items: ['진열 상품 고르기', '진열 상품', () => `
+    <div class="bar" style="margin-bottom:10px"><button class="sm ${S.mode === 'ALL' ? '' : 'ghost'}" onclick="S.mode='ALL';save();draw()">전체 자동</button><button class="sm ${S.mode === 'PICK' ? '' : 'ghost'}" onclick="S.mode='PICK';save();draw()">직접 고르기</button></div>
+    <p class="help">${S.mode === 'ALL' ? '전체 자동: 모든 상품이 보여요. ★로 추천 상품만 정할 수 있어요.' : '직접 고르기: 스위치를 끄면 내 쇼핑몰에서 숨겨져요.'}</p>
+    ${products().map(p => `<div class="row">${thumb(p, 'sm')}<span class="t">${esc(p.name)}<br><span class="help">${won(p.price)}</span></span>
+      <a href="javascript:void 0" onclick="fav(${p.no})" style="font-size:20px" class="star">${S.featured.includes(p.no) ? '★' : '☆'}</a>
+      ${S.mode === 'PICK' ? `<span class="tog ${S.hidden.includes(p.no) ? '' : 'on'}" onclick="hide(${p.no})"></span>` : ''}</div>`).join('')}
+    <p class="help">가격·설명은 바꿀 수 없어요(본사 정보 그대로).</p>`,
+    () => `<a class="btn" href="#manage">완료</a>`, '내 쇼핑몰'],
+
+  stats: ['개인몰 실적', '개인몰 실적', () => `
+    <div class="bar"><select style="width:100%"><option>2026년 11월</option><option>2026년 10월</option></select></div>
+    ${card('', table([['구분', r => r[0]], ['주문', r => r[1], 'r'], ['금액', r => won(r[2]), 'r'], ['PV', r => r[3], 'r']], [['회원 구매', 14, 1240000, '1,050'], ['비회원 구매', 6, 386000, '320'], ['합계', 20, 1626000, '1,370']]))}
+    ${card('최근 주문', table([['날짜', r => r[0]], ['구매자', r => r[1]], ['금액', r => won(r[2]), 'r']], [['11-26', '비회원', 58900], ['11-26', 'han9', 24900], ['11-25', '비회원', 44000]]))}
+    <div class="notice-box" style="font-size:12px">개인몰 실적은 내 판매 실적으로 합산되고, 수당은 <b>수당 규정</b>에 따라 계산됩니다. 비회원 구매는 실적으로 인정되며, 수당 총액 한도(35%) 계산 방식은 법률 확인 후 확정됩니다.</div>`,
+    () => `<a class="btn ghost" href="#manage">← 관리로</a>`, '내 쇼핑몰'],
+};
+
+/* ===== 동작 ===== */
+function slugMsg(){ const [k, m] = checkSlug(document.getElementById('slug').value.trim()); const el = document.getElementById('slugMsg'); el.className = 'msg ' + k; el.textContent = m; return k === 'ok'; }
+function goS2(){ if (!slugMsg()) return toast('주소를 확인해 주세요'); S.slug = document.getElementById('slug').value.trim(); save(); location.hash = 's2'; }
+function introMsg(){ const b = bannedIn(document.getElementById('intro').value + document.getElementById('title').value); const el = document.getElementById('introMsg'); el.className = 'msg ' + (b.length ? 'bad' : ''); el.textContent = b.length ? `쓸 수 없는 표현: ${b.join(', ')}` : ''; return !b.length; }
+function goS3(){ const t = document.getElementById('title').value.trim(); if (!t) return toast('쇼핑몰 이름을 입력하세요'); if (!introMsg()) return toast('쓸 수 없는 표현이 있습니다'); S.title = t; S.intro = document.getElementById('intro').value.trim(); save(); location.hash = 's3'; }
+function openShop(){ if (!document.getElementById('agree').checked) return toast('운영 규칙에 동의해 주세요'); S.open = true; save(); location.hash = 'done'; }
+function fav(no){ const i = S.featured.indexOf(no); i < 0 ? S.featured.push(no) : S.featured.splice(i, 1); save(); draw(); }
+function hide(no){ const i = S.hidden.indexOf(no); i < 0 ? S.hidden.push(no) : S.hidden.splice(i, 1); save(); draw(); }
+
+function draw(){
+  let key = location.hash.slice(1); if (!V[key]) key = S.open ? 'manage' : 'intro';
+  if (['s2', 's3', 's4'].includes(key) && !S.slug) key = 's1';
+  const [, title, body, foot, tab] = V[key];
+  document.getElementById('list').innerHTML = Object.entries(V).map(([k, [n]], i) => `<li><a href="#${k}" class="${k === key ? 'on' : ''}"><span class="n">${i + 1}</span>${n}</a></li>`).join('');
+  const ph = document.getElementById('phone');
+  const st = ph.querySelector('.ph-body')?.scrollTop;
+  ph.innerHTML = (title ? `<div class="ph-top"><a href="javascript:history.back()">‹</a><h2>${title}</h2></div>` : '')
+    + `<div class="ph-body">${body()}</div>` + (foot() ? `<div class="ph-foot">${foot()}</div>` : '') + (tab ? tabs(tab) : '');
+  if (key === 's1') slugMsg();
+  if (key === 's2') introMsg();
+  if (draw._last === key && st) ph.querySelector('.ph-body').scrollTop = st;
+  if (draw._last !== key && innerWidth <= 860) scrollTo(0, 0);
+  draw._last = key;
+}
+window.rerender = draw;
+window.addEventListener('hashchange', draw); draw();
+</script>
+</body>
+</html>

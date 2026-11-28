@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소개뱅크 홍보물</title>
+<!--
+  소개뱅크 홍보 이미지 원본 (16:9 와 1:1)
+  - 수당 비율·문구는 아래 PLAN 값만 바꾸면 됩니다.
+  - 이미지 만들기: node marketing/render.js  → marketing/promo_16x9.png, promo_1x1.png
+  - 주의: 수익 보장 표현, 모집만으로 수익이 생긴다는 표현, 개인 최고 금액은 넣지 않습니다.
+-->
+<style>
+  :root{--pri:#2457d6;--pri2:#e8eefc;--ink:#1d2433;--sub:#5b6478;--acc:#ff7a1a;--line:#dfe5f1}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans CJK KR",sans-serif;color:var(--ink);background:#fff}
+  .canvas{position:relative;overflow:hidden;background:linear-gradient(160deg,#f5f8ff 0%,#ffffff 55%,#eef3ff 100%)}
+  .w169{width:1372px;height:768px;padding:44px 56px}
+  .w11{width:1080px;height:1080px;padding:56px 56px}
+  .top{display:flex;justify-content:space-between;align-items:center}
+  .logo{display:flex;align-items:center;gap:12px;font-weight:800;font-size:28px}
+  .mark{width:44px;height:44px;border-radius:12px;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+  .url{color:var(--sub);font-size:18px}
+  h1{font-size:46px;line-height:1.25;margin:26px 0 8px;letter-spacing:-1px}
+  h1 b{color:var(--pri)}
+  .lead{font-size:20px;color:var(--sub)}
+  .flow{display:flex;align-items:center;gap:14px;margin:26px 0}
+  .step{flex:1;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;text-align:center}
+  .step .ic{font-size:30px}.step b{display:block;font-size:19px;margin-top:4px}.step span{font-size:14px;color:var(--sub)}
+  .arrow{color:var(--pri);font-size:26px;font-weight:700}
+  .bonus{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .card{background:#fff;border-radius:16px;padding:18px;border-top:5px solid var(--pri);box-shadow:0 6px 18px rgba(36,87,214,.08)}
+  .card .n{font-size:15px;color:var(--sub);font-weight:600}
+  .card .r{font-size:34px;font-weight:800;color:var(--pri);margin:4px 0}
+  .card .d{font-size:14px;color:var(--ink);line-height:1.45}
+  .ranks{display:flex;align-items:center;gap:8px;margin-top:20px;font-size:16px;flex-wrap:wrap}
+  .ranks .t{font-weight:700;margin-right:6px}
+  .rank{padding:6px 14px;border-radius:20px;background:var(--pri2);color:var(--pri);font-weight:700}
+  .rank.top{background:var(--pri);color:#fff}
+  .foot{position:absolute;left:0;right:0;bottom:0;background:#1d2433;color:#c9d2e6;font-size:13px;line-height:1.6;padding:12px 56px}
+  .foot b{color:#fff}
+  .free{display:inline-block;background:var(--acc);color:#fff;font-weight:800;padding:4px 12px;border-radius:8px;font-size:16px;margin-left:8px;vertical-align:middle}
+  .w11 h1{font-size:50px}
+  .w11 .bonus{grid-template-columns:1fr 1fr}
+  .w11 .card .r{font-size:40px}
+  .w11 .flow{align-items:stretch}
+  .w11 .arrow{align-self:center}
+  .w11 .step{display:flex;flex-direction:column;justify-content:center}
+  .w11 .bonus{margin-top:8px}
+  .w11 .ranks{margin-top:28px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+/* ===== 여기 값만 바꾸세요 ===== */
+const PLAN = {
+  brand: '소개뱅크', url: 'sogaebank.com',
+  title: ['좋은 상품을 <b>소개</b>하고,', '함께 <b>성장</b>합니다'],
+  lead: '소개뱅크 몰에서 구매한 실적이 쌓이고, 소개한 분의 구매 실적이 함께 반영됩니다.',
+  bonuses: [
+    { n: '직추천 수당', r: '10%', d: '내가 소개한 분이 <b>상품을 구매</b>하면 구매 실적(PV)의 10%' },
+    { n: '매칭 수당',   r: '5%',  d: '좌·우 판매 실적 중 <b>작은 쪽</b> 실적 기준 (월 상한 있음)' },
+    { n: '롤업 수당',   r: '각 1%', d: '하위 1~10대 구매 실적, 직급에 따라 3~10대 개방' },
+    { n: '직급 보너스', r: '3%',  d: '골드 이상, 전체 구매 실적의 3%를 직급 지분대로' },
+  ],
+  ranks: ['판매원', '실버', '골드', '플래티넘', '다이아몬드'],
+  legal: '다단계판매업 등록번호 ○○○ · 공제조합 ○○○ · (주)소개뱅크 사업자등록번호 ○○○-○○-○○○○○',
+};
+/* ============================== */
+const size = new URLSearchParams(location.search).get('size') || '169';
+document.getElementById('root').innerHTML = `
+<div class="canvas ${size === '11' ? 'w11' : 'w169'}">
+  <div class="top"><div class="logo"><div class="mark">소</div>${PLAN.brand}</div><div class="url">${PLAN.url}</div></div>
+  <h1>${PLAN.title.join('<br>')}</h1>
+  <p class="lead">${PLAN.lead}</p>
+  <div class="flow">
+    <div class="step"><div class="ic">📝</div><b>판매원 등록 <span class="free">무료</span></b><span>가입비 없음</span></div><div class="arrow">→</div>
+    <div class="step"><div class="ic">🛍️</div><b>몰에서 구매</b><span>구매 확정 시 PV 적립</span></div><div class="arrow">→</div>
+    <div class="step"><div class="ic">🤝</div><b>좋은 상품 소개</b><span>개인몰·추천 링크로 공유</span></div><div class="arrow">→</div>
+    <div class="step"><div class="ic">📊</div><b>판매 실적에 따른 수당</b><span>규정에 따라 지급</span></div>
+  </div>
+  <div class="bonus">${PLAN.bonuses.map(b => `<div class="card"><div class="n">${b.n}</div><div class="r">${b.r}</div><div class="d">${b.d}</div></div>`).join('')}</div>
+  <div class="ranks"><span class="t">직급</span>${PLAN.ranks.map((r, i) => `<span class="rank ${i === PLAN.ranks.length - 1 ? 'top' : ''}">${r}</span>${i < PLAN.ranks.length - 1 ? '<span>›</span>' : ''}`).join('')}</div>
+  <div class="foot">
+    <b>꼭 읽어 주세요</b> · 후원수당은 <b>실제 상품 구매(구매 확정) 실적</b>에 따라 지급되며 <b>수익을 보장하지 않습니다.</b> 회원 모집만으로는 수당이 생기지 않습니다.
+    후원수당 총액은 법정 한도 안에서 지급되며, 기준을 넘으면 모든 수당이 같은 비율로 조정될 수 있습니다. 판매원 1인당 평균 수당 등 지급 현황은 홈페이지에 공개합니다.<br>${PLAN.legal}
+  </div>
+</div>`;
+</script>
+</body>
+</html>
